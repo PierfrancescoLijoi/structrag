@@ -128,7 +128,33 @@ def test_pii_masking_replaces_identifiers_before_storage(services, tmp_path):
                  encoding="utf-8")
     services.ingestor.pii_detector = fake_detect
     r = services.ingestor.ingest_file(f)
-    assert r.status == "ingested" and any(w.startswith("pii: 2") for w in r.warnings)
+    assert r.status == "ingested" and r.pii == {"FULLNAME": 1, "CF": 1}
+    assert services.store.list_documents()[0]["pii"] == {"FULLNAME": 1, "CF": 1}
     hit = services.retriever.search("contratto firma")[0]
     assert "Mario" not in hit.text and "RSSMRA" not in hit.text
     assert hit.text.count("[FULLNAME_1]") == 2 and "[CF_1]" in hit.text and "2025" in hit.text
+
+
+def test_stats_endpoint_aggregates_documents_and_pii(services, md_file):
+    services.ingestor.ingest_file(md_file)
+    client = TestClient(create_app(services))
+    s = client.get("/api/stats").json()
+    assert s["documents"] == 1 and s["chunks"] > 0 and s["by_format"] == {"md": 1}
+    assert s["pii"] == {"mode": "off", "model": services.settings.pii_model, "docs_with_pii": 0, "by_label": {}}
+    assert client.get("/api/health").json()["pii_mode"] == "off"
+
+
+def test_pii_ctx_and_text_stay_consistent(services, tmp_path):
+    # detector that only fires when the value is preceded by a space: it would miss text-start values
+    # if ctx and text were masked independently
+    def detect(text):
+        i = text.find("Anna Bianchi")
+        return [{"entity_group": "FULLNAME", "start": i, "end": i + 12, "score": 0.9}] if i != -1 else []
+
+    f = tmp_path / "note.md"
+    f.write_text("# Note\n\nAnna Bianchi ha firmato il documento.\n", encoding="utf-8")
+    services.ingestor.pii_detector = detect
+    services.ingestor.ingest_file(f)
+    rows = services.store.conn.execute("SELECT text, ctx FROM chunks").fetchall()
+    assert rows and all("Anna" not in r["text"] and "Anna" not in r["ctx"] for r in rows)
+    assert not services.store.conn.execute("SELECT 1 FROM chunk_fts WHERE chunk_fts MATCH 'Anna'").fetchall()

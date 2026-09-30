@@ -42,6 +42,13 @@ def _hostname(raw: str) -> str:
     return raw.rsplit(":", 1)[0] if ":" in raw else raw
 
 
+def _count(items) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for i in items:
+        out[i] = out.get(i, 0) + 1
+    return out
+
+
 def _safe_name(filename: str) -> str:
     p = Path(filename.replace("\\", "/")).name
     stem = re.sub(r"[^\w.-]+", "_", Path(p).stem)[:60].strip("._") or "file"
@@ -81,8 +88,25 @@ def create_app(services: Services) -> FastAPI:
     def health() -> dict:
         info = services.llm.health() if hasattr(services.llm, "health") else {"ok": True}
         return {**info, "embedder": services.settings.embedder, "chat_model": services.settings.chat_model,
-                "embed_model": services.settings.embed_model,
+                "embed_model": services.settings.embed_model, "pii_mode": services.settings.pii_mode,
                 "documents": len(services.store.list_documents())}
+
+    @app.get("/api/stats")
+    def stats() -> dict:
+        docs = services.store.list_documents()
+        pii: dict[str, int] = {}
+        for d in docs:
+            for label, n in d["pii"].items():
+                pii[label] = pii.get(label, 0) + n
+        by_status: dict[str, int] = {}
+        for d in docs:
+            by_status[d["status"]] = by_status.get(d["status"], 0) + 1
+        return {"documents": len(docs), "sections": sum(d["n_sections"] for d in docs),
+                "chunks": sum(d["n_chunks"] for d in docs), "words": sum(d["words"] for d in docs),
+                "by_status": by_status, "by_format": _count(d["format"] for d in docs),
+                "pending_reviews": len(services.store.pending_reviews()),
+                "pii": {"mode": services.settings.pii_mode, "model": services.settings.pii_model,
+                        "docs_with_pii": sum(1 for d in docs if d["pii"]), "by_label": pii}}
 
     @app.post("/api/upload")
     async def upload(files: list[UploadFile] = File(...)) -> dict:

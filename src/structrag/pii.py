@@ -57,5 +57,6 @@ class PiiMasker:
         return "".join(out) + text[pos:]
 
     @property
-    def n_masked(self) -> int:
-        return len(self._ids)
+    def counts(self) -> dict[str, int]:
+        """Distinct masked values per label, e.g. {"FULLNAME": 2, "CF": 1}."""
+        return dict(self._counts)

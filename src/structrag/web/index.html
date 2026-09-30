@@ -40,6 +40,14 @@
   .card { max-width:820px; margin:0 auto 12px; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:12px; }
   .card .opts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
   .dim { color:var(--dim); font-size:12px; }
+  .badge.pii { color:var(--acc); }
+  #overview { display:none; padding:18px; overflow-y:auto; }
+  #overview .wrap { max-width:820px; margin:0 auto; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .tile { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:12px; }
+  .tile b { display:block; font-size:24px; }
+  .bar { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; }
+  .bar .lbl { width:140px; color:var(--dim); } .bar .fill { height:8px; background:var(--acc); border-radius:4px; }
 </style>
 </head>
 <body>
@@ -49,11 +57,13 @@
     <input id="file" type="file" multiple hidden accept=".pdf,.docx,.pptx,.xlsx,.md,.markdown,.txt"></div>
   <h3>Chats</h3><div id="sessions" class="list" style="max-height:28%"></div>
   <h3>Documents <span class="dim" id="scope"></span></h3><div id="docs" class="list" style="flex:1"></div>
-  <div style="padding:10px 14px;border-top:1px solid var(--line)"><button id="reviewbtn" style="width:100%">Review queue (0)</button></div>
+  <div style="padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px">
+    <button id="overviewbtn">Overview</button><button id="reviewbtn">Review queue (0)</button></div>
 </aside>
 <main>
-  <header><b>structrag</b><span id="status">connecting...</span><span class="sp"></span><span class="dim">100% local</span></header>
+  <header><b>structrag</b><span id="status">connecting...</span><span class="sp"></span><span class="dim" id="piistate"></span><span class="dim">100% local</span></header>
   <div id="msgs"></div>
+  <div id="overview"></div>
   <div id="review"></div>
   <form id="form"><textarea id="q" placeholder="Ask about your documents..." autofocus></textarea><button>Send</button></form>
 </main>
@@ -99,13 +109,16 @@ async function refresh() {
   const [docs, sessions, review, health] = await Promise.all(['/api/docs', '/api/sessions', '/api/review', '/api/health'].map((p) => api(p).then((r) => r.json())));
   $('status').textContent = health.ok ? `models: ${health.chat_ready ? 'chat ok' : 'chat missing'}, ${health.embed_ready || health.embedder === 'hash' ? 'embed ok' : 'embed missing'}` : 'model server offline (start Ollama)';
   $('reviewbtn').textContent = `Review queue (${review.length})`;
+  if ($('overview').style.display === 'block') loadOverview();
+  $('piistate').textContent = `PII: ${health.pii_mode === 'mask' ? 'masking on' : 'off'}`;
   $('scope').textContent = selected.size ? `(${selected.size} selected)` : '(all)';
   $('docs').replaceChildren(...docs.map((d) => {
     const row = el('div', 'item' + (selected.has(d.id) ? ' active' : ''));
     row.title = `${d.n_sections} sections, ${d.n_chunks} chunks, ${d.strategy || '-'} (${d.confidence.toFixed(2)})\n${d.warnings.join('\n')}`;
     row.onclick = () => { selected.has(d.id) ? selected.delete(d.id) : selected.add(d.id); refresh(); };
     const del = el('button', 'x', '×'); del.onclick = async (e) => { e.stopPropagation(); await api(`/api/docs/${d.id}`, { method: 'DELETE' }); selected.delete(d.id); refresh(); };
-    row.append(el('span', 't', d.title), el('span', 'badge ' + d.status, d.status), del); return row;
+    const pii = Object.values(d.pii).reduce((a, b) => a + b, 0);
+    row.append(el('span', 't', d.title), ...(pii ? [el('span', 'badge pii', `PII ${pii}`)] : []), el('span', 'badge ' + d.status, d.status), del); return row;
   }));
   $('sessions').replaceChildren(...sessions.map((s) => {
     const row = el('div', 'item' + (s.id === session ? ' active' : '')); row.onclick = () => openSession(s.id);
@@ -119,7 +132,8 @@ async function openSession(id) {
   (await (await api(`/api/sessions/${id}`)).json()).messages.forEach((m) => addMessage(m.role, m.content, m.sources.map((s, i) => ({ n: i + 1, ...s }))));
   refresh();
 }
-function showChat() { $('review').style.display = 'none'; $('msgs').style.display = ''; $('form').style.display = ''; }
+function showChat() { $('review').style.display = 'none'; $('overview').style.display = 'none'; $('msgs').style.display = ''; $('form').style.display = ''; }
+function showPanel(id) { ['msgs', 'form', 'review', 'overview'].forEach((x) => $(x).style.display = 'none'); $(id).style.display = 'block'; }
 
 $('newchat').onclick = async () => { session = (await (await api('/api/sessions', { method: 'POST', body: JSON.stringify({}) })).json()).id; showChat(); $('msgs').replaceChildren(); refresh(); };
 
@@ -164,8 +178,29 @@ $('drop').ondragover = (e) => { e.preventDefault(); $('drop').classList.add('ove
 $('drop').ondragleave = () => $('drop').classList.remove('over');
 $('drop').ondrop = (e) => { e.preventDefault(); $('drop').classList.remove('over'); upload(e.dataTransfer.files); };
 
+function bars(title, counts) {
+  const box = el('div', 'card'); box.append(el('div', 'dim', title));
+  const max = Math.max(1, ...Object.values(counts));
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) box.append(el('div', 'dim', 'none'));
+  entries.forEach(([k, v]) => { const r = el('div', 'bar'); const f = el('div', 'fill'); f.style.width = `${(v / max) * 100}%`; r.append(el('span', 'lbl', k), f, el('span', '', v)); box.append(r); });
+  return box;
+}
+async function loadOverview() {
+  let s;
+  try { s = await (await api('/api/stats')).json(); }
+  catch (e) { return $('overview').replaceChildren(el('div', 'dim', 'Could not load stats: ' + e.message)); }
+  const wrap = el('div', 'wrap'), tiles = el('div', 'tiles');
+  [['Documents', s.documents], ['Sections', s.sections], ['Chunks', s.chunks], ['Words', s.words.toLocaleString()],
+   ['To review', s.pending_reviews], ['Docs with PII', s.pii.docs_with_pii]].forEach(([k, v]) => { const t = el('div', 'tile'); t.append(el('b', '', v), el('span', 'dim', k)); tiles.append(t); });
+  const note = el('div', 'dim', s.pii.mode === 'mask' ? `PII masking on (${s.pii.model}): identifiers are replaced before indexing.` : 'PII masking off. Start with STRUCTRAG_PII_MODE=mask to enable it.');
+  wrap.append(tiles, bars('Documents by status', s.by_status), bars('Documents by format', s.by_format), bars('Masked PII values by type', s.pii.by_label), note);
+  $('overview').replaceChildren(wrap);
+}
+$('overviewbtn').onclick = () => { showPanel('overview'); loadOverview(); };
+
 $('reviewbtn').onclick = async () => {
-  $('msgs').style.display = 'none'; $('form').style.display = 'none'; $('review').style.display = 'block';
+  showPanel('review');
   const items = await (await api('/api/review')).json(); const box = $('review'); box.replaceChildren();
   if (!items.length) box.append(el('div', 'dim', 'Nothing to review: every structure decision was confident.'));
   items.forEach((it) => {

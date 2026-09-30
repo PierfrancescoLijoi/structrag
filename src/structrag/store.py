@@ -20,7 +20,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents(
   id INTEGER PRIMARY KEY, path TEXT, sha256 TEXT UNIQUE, format TEXT, title TEXT, summary TEXT,
   emb BLOB, n_sections INTEGER, n_chunks INTEGER, words INTEGER, strategy TEXT,
-  confidence REAL, status TEXT, warnings TEXT, ingested_at REAL);
+  confidence REAL, status TEXT, warnings TEXT, ingested_at REAL, pii TEXT);
 CREATE TABLE IF NOT EXISTS sections(
   id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
   ordinal INTEGER, level INTEGER, title TEXT, path TEXT, summary TEXT, emb BLOB);
@@ -66,6 +66,8 @@ class Store:
         self._lock = threading.RLock()
         with self.conn:
             self.conn.executescript(SCHEMA)
+            if "pii" not in {r["name"] for r in self.conn.execute("PRAGMA table_info(documents)")}:
+                self.conn.execute("ALTER TABLE documents ADD COLUMN pii TEXT")   # DBs created before PII masking
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -86,11 +88,12 @@ class Store:
         with self._lock, self.conn as c:
             cur = c.execute(
                 "INSERT INTO documents(path,sha256,format,title,summary,emb,n_sections,n_chunks,words,"
-                "strategy,confidence,status,warnings,ingested_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "strategy,confidence,status,warnings,ingested_at,pii) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["path"], meta["sha256"], meta["format"], meta["title"], meta["summary"],
                  _blob(doc_emb) if doc_emb is not None else None, len(sections),
                  sum(len(s["chunks"]) for s in sections), meta["words"], meta["strategy"],
-                 meta["confidence"], meta["status"], json.dumps(meta.get("warnings", [])), time.time()))
+                 meta["confidence"], meta["status"], json.dumps(meta.get("warnings", [])), time.time(),
+                 json.dumps(meta.get("pii", {}))))
             doc_id = cur.lastrowid
             for ordinal, s in enumerate(sections):
                 sc = c.execute(
@@ -113,8 +116,9 @@ class Store:
     def list_documents(self) -> list[dict]:
         rows = self.conn.execute(
             "SELECT id,path,format,title,n_sections,n_chunks,words,strategy,confidence,status,warnings,"
-            "ingested_at FROM documents ORDER BY ingested_at DESC").fetchall()
-        return [dict(r) | {"warnings": json.loads(r["warnings"] or "[]")} for r in rows]
+            "ingested_at,pii FROM documents ORDER BY ingested_at DESC").fetchall()
+        return [dict(r) | {"warnings": json.loads(r["warnings"] or "[]"), "pii": json.loads(r["pii"] or "{}")}
+                for r in rows]
 
     def outline(self, doc_id: int) -> list[dict]:
         rows = self.conn.execute(

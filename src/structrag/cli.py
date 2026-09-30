@@ -85,7 +85,7 @@ def cmd_serve(sv: Services, args) -> int:
 def cmd_docs(sv: Services, args) -> int:
     for d in sv.store.list_documents():
         print(f"{d['id']:4} {d['status']:9} {d['format']:5} {d['n_sections']:4} sec {d['n_chunks']:5} chunks  "
-              f"{d['strategy'] or '-':22} {d['confidence']:.2f}  {d['title']}")
+              f"{d['strategy'] or '-':22} {d['confidence']:.2f}  pii={sum(d['pii'].values()):3}  {d['title']}")
     return 0
 
 
@@ -98,7 +98,7 @@ def cmd_review(sv: Services, args) -> int:
 
 def cmd_doctor(sv: Services, args) -> int:
     info = sv.llm.health() if hasattr(sv.llm, "health") else {"ok": True}
-    print(info)
+    print(info, f"pii_mode={sv.settings.pii_mode}")
     if not info.get("ok"):
         print("model server unreachable: start Ollama or set STRUCTRAG_BASE_URL / STRUCTRAG_EMBEDDER=hash")
         return 1

@@ -35,6 +35,7 @@ class IngestResult:
     queued_for_review: int = 0
     warnings: tuple[str, ...] = field(default_factory=tuple)
     error: str = ""
+    pii: dict = field(default_factory=dict)   # masked distinct values per label
 
 
 def file_sha256(path: Path) -> str:
@@ -68,8 +69,16 @@ def _apply_header_overrides(doc: ParsedDoc, overrides: dict) -> ParsedDoc:
     return replace(doc, blocks=tuple(blocks))
 
 
+def _mask_chunk(c, masker: PiiMasker):
+    """ctx = breadcrumb + text: mask each part once and rebuild, so both copies always agree."""
+    prefix = c.ctx[:len(c.ctx) - len(c.text) - 1] if c.ctx != c.text else ""
+    text = masker.mask(c.text)
+    ctx = "\n".join((masker.mask(prefix), text)) if prefix else text
+    return replace(c, text=text, ctx=ctx)
+
+
 def _mask_section(section: dict, masker: PiiMasker) -> dict:
-    chunks = [replace(c, text=masker.mask(c.text), ctx=masker.mask(c.ctx)) for c in section["chunks"]]
+    chunks = [_mask_chunk(c, masker) for c in section["chunks"]]
     title, path, summary = (masker.mask(section[k]) for k in ("title", "path", "summary"))
     return {**section, "title": title, "path": path, "summary": summary, "chunks": chunks,
             "card": f"{path}\n{summary}"}
@@ -130,10 +139,10 @@ class Ingestor:
         return queued
 
     def _meta(self, path: Path, sha: str, doc: ParsedDoc, summary: str, conf: float, status: str,
-              words: int, strategy: str = "") -> dict:
+              words: int, strategy: str = "", pii: dict | None = None) -> dict:
         return {"path": str(path), "sha256": sha, "format": doc.format, "title": doc.title,
                 "summary": summary, "words": words, "strategy": strategy, "confidence": conf,
-                "status": status, "warnings": list(doc.warnings)}
+                "status": status, "warnings": list(doc.warnings), "pii": pii or {}}
 
     def _build(self, path: Path, sha: str, doc: ParsedDoc) -> IngestResult:
         doc, inf, decisions = self._resolve_structure(doc, sha)
@@ -152,11 +161,12 @@ class Ingestor:
             return IngestResult("failed", error="document has no extractable text", warnings=doc.warnings)
 
         doc_summary = document_summary(tree, words, self.llm, self.s)
+        pii: dict = {}
         if self.pii_detector:
             masker = PiiMasker(self.pii_detector, self.s.pii_min_score)
             doc_summary, sections = masker.mask(doc_summary), [_mask_section(s, masker) for s in sections]
-            doc = replace(doc, title=masker.mask(doc.title),
-                          warnings=(*doc.warnings, f"pii: {masker.n_masked} distinct values masked"))
+            doc = replace(doc, title=masker.mask(doc.title))
+            pii = masker.counts
         doc_vec = self.embedder.embed([f"{doc.title}\n{doc_summary}"])[0]
         sec_vecs = self.embedder.embed([s["card"] for s in sections])
         flat = [c for s in sections for c in s["chunks"]]
@@ -173,11 +183,11 @@ class Ingestor:
         pending = [d for d in decisions if not d.accepted]
         conf = inf.confidence if not decisions else max(inf.confidence, 0.85 if not pending else 0.5)
         status = "review" if pending else "ok"
-        meta = self._meta(path, sha, doc, doc_summary, conf, status, words, inf.strategy)
+        meta = self._meta(path, sha, doc, doc_summary, conf, status, words, inf.strategy, pii)
         doc_id = self.store.save_document(meta, doc_vec, payload)
         queued = self._learn_and_queue(doc_id, doc, inf, decisions)
         return IngestResult("ingested", doc_id, len(payload), len(flat), inf.strategy, conf,
-                            len(decisions), queued, doc.warnings)
+                            len(decisions), queued, doc.warnings, pii=pii)
 
     def reingest(self, doc_id: int) -> IngestResult:
         """Rebuild a document from its stored file, e.g. after a human correction."""
