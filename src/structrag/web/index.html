@@ -34,6 +34,10 @@
   .src { border:1px solid var(--line); border-radius:6px; padding:5px 8px; font-size:12px; color:var(--dim); }
   .src b { color:var(--text); } .src pre { display:none; white-space:pre-wrap; margin:6px 0 0; color:var(--text); }
   .src.open pre { display:block; }
+  .src.cited { border-color:var(--ok); } .src img { display:block; max-width:100%; max-height:220px; margin-top:6px; border-radius:4px; }
+  .src .quote { margin:6px 0 0; padding-left:8px; border-left:2px solid var(--ok); color:var(--text); font-style:italic; }
+  .verdict { margin-top:6px; font-size:11px; } .verdict.ok { color:var(--ok); } .verdict.no { color:var(--warn); }
+  .msg.refused .body { color:var(--dim); font-style:italic; }
   form { padding:12px 18px 18px; max-width:860px; width:100%; margin:0 auto; display:flex; gap:8px; }
   textarea { flex:1; resize:none; height:52px; background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; }
   #review { display:none; padding:18px; overflow-y:auto; }
@@ -86,7 +90,7 @@ function renderText(container, text, sources) {
     const m = part.match(/^\[(\d+)\]$/);
     if (!m) return container.append(part);
     const s = el('span', 'cite', part);
-    s.onclick = () => container.parentElement.querySelectorAll('.src')[m[1] - 1]?.classList.toggle('open');
+    s.onclick = () => container.parentElement.querySelector(`.src[data-n="${m[1]}"]`)?.classList.toggle('open');
     container.append(s);
   });
 }
@@ -97,13 +101,24 @@ function addMessage(role, text, sources = []) {
   $('msgs').append(box); $('msgs').scrollTop = $('msgs').scrollHeight;
   return { body, list };
 }
-function setSources(list, sources) {
+function setSources(list, sources, cited = false) {
   list.replaceChildren();
   sources.forEach((s) => {
-    const d = el('div', 'src'); const head = el('div'); head.append(el('b', '', `[${s.n}] ${s.doc}`), ` > ${s.section} (${s.loc || 'n/a'})`);
+    const d = el('div', 'src' + (s.cited ? ' cited' : '')); d.dataset.n = s.n;
+    const head = el('div'); head.append(el('b', '', `[${s.n}] ${s.doc}`), ` > ${s.section} (${s.loc || 'n/a'})${s.kind === 'image' ? ' - figure' : ''}`);
     head.style.cursor = 'pointer'; head.onclick = () => d.classList.toggle('open');
-    d.append(head, el('pre', '', s.text)); list.append(d);
+    d.append(head);
+    if (s.evidence) d.append(el('div', 'quote', s.evidence));
+    if (s.image) { const img = el('img'); img.src = `/api/images/${s.image}`; img.alt = 'cited figure'; img.loading = 'lazy'; d.append(img); }
+    d.append(el('pre', '', s.text)); list.append(d);
   });
+}
+function showVerdict(box, ev) {
+  const v = ev.verdict || {}, n = ev.citations.length;
+  const label = ev.answered ? `grounded: ${n} source${n === 1 ? '' : 's'} checked${v.verifier !== undefined ? `, verifier ${(v.verifier * 100).toFixed(0)}%` : ''}`
+    : `not answered: ${v.reason || 'no supporting passage'}`;
+  box.append(el('div', 'verdict ' + (ev.answered ? 'ok' : 'no'), label));
+  box.classList.toggle('refused', !ev.answered);
 }
 
 async function refresh() {
@@ -155,11 +170,16 @@ $('form').onsubmit = async (e) => {
         if (!line.startsWith('data:')) continue;
         const ev = JSON.parse(line.slice(5));
         if (ev.type === 'sources') { sources = ev.sources; setSources(out.list, sources); }
-        else if (ev.type === 'token') { text += ev.text; out.body.textContent = text; $('msgs').scrollTop = $('msgs').scrollHeight; }
+        else if (ev.type === 'status') out.body.textContent = ({ searching: 'Searching the documents...', answering: 'Reading the sources...', verifying: 'Checking the answer against the sources...' })[ev.text] || ev.text;
+        else if (ev.type === 'final') {
+          text = ev.text; renderText(out.body, text);
+          setSources(out.list, ev.answered ? ev.citations : sources.map((s) => ({ ...s, cited: false })));
+          showVerdict(out.list.parentElement, ev);
+          $('msgs').scrollTop = $('msgs').scrollHeight;
+        }
         else if (ev.type === 'error') out.body.textContent = text + '\n[error] ' + ev.text;
       }
     }
-    renderText(out.body, text);
   } catch (err) { out.body.textContent = 'Error: ' + err.message; }
   busy = false; refresh();
 };

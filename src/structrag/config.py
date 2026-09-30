@@ -35,6 +35,12 @@ class Settings:
     section_summary_words: int = 400
     summary_mode: str = field(default_factory=lambda: _env("SUMMARY_MODE", "lead"))  # lead | llm
 
+    # Grounding: answers are checked against their sources or replaced by an honest refusal.
+    grounding: str = field(default_factory=lambda: _env("GROUNDING", "strict"))   # strict | off
+    min_relevance: float = -7.0     # reranker logit of the best passage below which we do not even ask the model
+    min_support: float = 0.5        # share of a sentence's content words that its cited passage must contain
+    verifier_min: float = 0.5       # P("fully supported") the LLM verifier must reach
+
     # Retrieval.
     context_max_chars: int = 9000   # ~4-5k tokens: numbers tokenise ~1 token/char, window is 8k
     top_docs: int = 5

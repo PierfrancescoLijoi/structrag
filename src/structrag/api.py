@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .app import Services, apply_review
@@ -84,12 +84,22 @@ def create_app(services: Services) -> FastAPI:
     def index() -> str:
         return INDEX_HTML.read_text(encoding="utf-8")
 
+    @app.get("/api/images/{ref}")
+    def image(ref: str) -> FileResponse:
+        """Thumbnail of a figure that an answer cites. `ref` is a hash: anything else is rejected (no paths)."""
+        path = services.settings.data_dir / "images" / f"{ref}.jpg"
+        if not re.fullmatch(r"[0-9a-f]{16}", ref) or not path.is_file():
+            raise HTTPException(404, "image not found")
+        return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
+
     @app.get("/api/health")
     def health() -> dict:
         info = services.llm.health() if hasattr(services.llm, "health") else {"ok": True}
         return {**info, "embedder": services.settings.embedder, "chat_model": services.settings.chat_model,
                 "embed_model": services.settings.embed_model, "pii_mode": services.settings.pii_mode,
-                "rerank": services.settings.rerank, "local_embed_model": services.settings.local_embed_model,
+                "rerank": services.settings.rerank,
+                "ocr": services.settings.ocr, "vision_model": services.settings.vision_model,
+                "grounding": services.settings.grounding, "local_embed_model": services.settings.local_embed_model,
                 "documents": len(services.store.list_documents())}
 
     @app.get("/api/stats")
