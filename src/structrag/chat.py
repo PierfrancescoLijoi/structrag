@@ -34,7 +34,13 @@ SYSTEM = (
     "beyond what is written, and never round or change numbers.\n"
     "3. If the passages do not contain the answer, reply with exactly: NO_ANSWER\n"
     "4. If they contain only part of the answer, give that part and say which part the documents do not cover.\n"
-    "5. Be brief and answer in the language of the question.")
+    "5. Be brief and answer in the language of the question.\n"
+    "6. A passage marked (linked) was pulled in because another passage refers to it (or it refers to that "
+    "one): use it to complete the answer, cite it like any other, and prefer the unmarked passages when they conflict.\n"
+    "7. A passage marked [figure] is the text read from an image (OCR or a description): quote what it says, "
+    "and say it comes from a figure.")
+# (Making 6 and 7 conditional on the context changed 28% of the answers and cost 3 of 182 on the held-out set:
+# a 4B model is sensitive to the prompt, so the measured wording stays fixed.)
 
 VERIFY = (
     "Passages:\n{passages}\n\nProposed answer:\n{answer}\n\n"
@@ -43,19 +49,32 @@ VERIFY = (
     "Reply with A or B.")
 
 
+def passage(c: Context) -> str:
+    """What the answer may be checked against: the section title (headings often carry the years and names
+    the model quotes) followed by the text."""
+    return f"{c.section_path}\n{c.text}"
+
+
 def _format_context(contexts: list[Context]) -> str:
-    return "\n\n".join(f"[{c.n}] {c.doc_title} > {c.section_path} ({c.loc})\n{c.text}" for c in contexts)
+    def head(c: Context) -> str:
+        tags = (" [figure]" if c.kind == "image" else "") + (f" (linked: {c.via})" if c.via else "")
+        return f"[{c.n}]{tags} {c.doc_title} > {c.section_path} ({c.loc})"
+    return "\n\n".join(f"{head(c)}\n{c.text}" for c in contexts)
 
 
 def _source(c: Context, cited: bool = False, evidence: str = "") -> dict:
     return {"n": c.n, "doc_id": c.doc_id, "doc": c.doc_title, "section": c.section_path, "loc": c.loc,
-            "text": c.text[:SOURCE_PREVIEW_CHARS], "kind": c.kind, "image": c.ref, "cited": cited,
-            "evidence": evidence}
+            "text": c.text[:SOURCE_PREVIEW_CHARS], "kind": c.kind, "image": c.ref, "images": list(c.figures),
+            "via": c.via, "cited": cited, "evidence": evidence}
 
 
 class ChatService:
     def __init__(self, settings: Settings, store: Store, retriever: Retriever, llm: ChatModel):
         self.s, self.store, self.retriever, self.llm = settings, store, retriever, llm
+
+    def _source(self, c: Context, cited: bool = False, evidence: str = "") -> dict:
+        """The source as the UI shows it, plus the references to follow from it (graph navigation)."""
+        return {**_source(c, cited, evidence), "refs": self.store.neighbours(list(c.chunks))}
 
     # ---- memory ----------------------------------------------------------------------------
     def _standalone_query(self, message: str, history: list[dict]) -> str:
@@ -89,16 +108,23 @@ class ChatService:
     # ---- grounding -------------------------------------------------------------------------
     def _relevant(self, contexts: list[Context]) -> tuple[bool, float]:
         """Is the best passage relevant enough to even try? Only meaningful with a reranker (calibrated scores)."""
-        best = max((c.score for c in contexts), default=float("-inf"))
+        best = max((c.score for c in contexts if not c.via), default=float("-inf"))   # graph hits never vouch
         if not contexts:
             return False, best
         if self.retriever.reranker is None:
             return True, best
         return best >= self.s.min_relevance, best
 
-    def _verified(self, answer: str, passages: list[Context]) -> tuple[bool, float]:
-        """LLM check of the assembled answer against ONLY the passages it cites."""
-        listing = "\n\n".join(f"[{c.n}] {c.text[:1500]}" for c in passages)
+    def _verified(self, checked: grounding.Checked, passages: list[Context]) -> tuple[bool, float]:
+        """LLM check of the assembled answer against ONLY the excerpts of the passages it cites."""
+        by_n = {c.n: c for c in passages}
+        excerpts: dict[int, list[str]] = {}
+        for claim in checked.claims:
+            for n in claim.cites:
+                if n in by_n:
+                    excerpts.setdefault(n, []).append(grounding.excerpt(claim.text, passage(by_n[n])))
+        listing = "\n\n".join(f"[{n}] " + " [...] ".join(dict.fromkeys(parts)) for n, parts in sorted(excerpts.items()))
+        answer = checked.render()
         try:
             probs = self.llm.choose([{"role": "user", "content": VERIFY.format(passages=listing, answer=answer)}],
                                     ["A", "B"])
@@ -113,14 +139,13 @@ class ChatService:
         if grounding.is_refusal(raw):
             verdict["reason"] = "model found no answer in the passages"
             return grounding.Checked(), verdict
-        checked = grounding.check_answer(raw, [c.text for c in contexts], self.s.min_support)
+        checked = grounding.check_answer(raw, [passage(c) for c in contexts], self.s.min_support)
         verdict["dropped"] = [{"sentence": s, "why": why} for s, why in checked.dropped]
         if not checked.claims:
             verdict["reason"] = "no sentence was supported by the passages"
             return checked, verdict
-        if self.s.grounding == "strict":
-            cited = [c for c in contexts if c.n in checked.cited]
-            ok, p = self._verified(checked.render(), cited)
+        if self.s.grounding == "strict" and self.s.verifier_min > 0:
+            ok, p = self._verified(checked, [c for c in contexts if c.n in checked.cited])
             verdict["verifier"] = round(p, 3)
             if not ok:
                 verdict["reason"] = "verifier rejected the answer"
@@ -140,8 +165,9 @@ class ChatService:
 
         yield {"type": "status", "text": "searching"}
         query = self._standalone_query(message, history)
-        contexts = self.retriever.build_context(self.retriever.search(query, doc_ids))
-        yield {"type": "sources", "query": query, "sources": [_source(c) for c in contexts]}
+        hits = self.retriever.search(query, doc_ids)
+        contexts = self.retriever.build_context(hits, linked=self.retriever.follow_links(query, hits))
+        yield {"type": "sources", "query": query, "sources": [self._source(c) for c in contexts]}
 
         relevant, best = self._relevant(contexts)
         verdict: dict = {"relevance": None if best == float("-inf") else round(best, 2), "reason": ""}
@@ -173,7 +199,7 @@ class ChatService:
                 if self.s.grounding == "off" else grounding.Checked(claims=claims).render()
             evidence = {n: next((c.evidence for c in claims if c.cites and c.cites[0] == n), "") for n in by_n}
             cited = sorted({n for c in claims for n in c.cites})
-            sources = [_source(by_n[n], True, evidence.get(n, "")) for n in cited]
+            sources = [self._source(by_n[n], True, evidence.get(n, "")) for n in cited]
         else:
             text, cited, sources = grounding.refusal(message), [], []
         yield {"type": "final", "answered": bool(claims), "text": text, "citations": sources,

@@ -37,9 +37,19 @@ class Settings:
 
     # Grounding: answers are checked against their sources or replaced by an honest refusal.
     grounding: str = field(default_factory=lambda: _env("GROUNDING", "strict"))   # strict | off
-    min_relevance: float = -7.0     # reranker logit of the best passage below which we do not even ask the model
-    min_support: float = 0.5        # share of a sentence's content words that its cited passage must contain
-    verifier_min: float = 0.5       # P("fully supported") the LLM verifier must reach
+    # Calibrated on 232 questions (eval/bench/calibrate.py): every answer below relevance 0 was wrong or a non-answer,
+    # the least relevant correct one scored 0.38; a lexical support gate above 0.2 only loses correct answers.
+    min_relevance: float = 0.0      # reranker logit of the best passage below which we do not even ask the model
+    min_support: float = 0.2        # share of a sentence's content words that its cited passage must contain
+    # The 4B verifier separates right from wrong poorly (AUC 0.70-0.75 in every prompt variant tried) and rejects
+    # 17-35% of correct answers to catch 4-7 of 10 wrong ones: off by default. > 0 = P("fully supported") required.
+    verifier_min: float = 0.0
+
+    # Reference graph (links.py): passages cited by the best hits join the context, one hop, never chained.
+    graph: bool = field(default_factory=lambda: _env("GRAPH", "on") == "on")
+    link_seeds: int = 3             # only the best hits pull their references in
+    link_max: int = 3               # linked passages added per question
+    link_min_relevance: float = 0.0   # reranker logit a linked passage must reach for THIS question
 
     # Retrieval.
     context_max_chars: int = 9000   # ~4-5k tokens: numbers tokenise ~1 token/char, window is 8k

@@ -12,6 +12,7 @@ import numpy as np
 from .chunking import chunk_section
 from .config import Settings
 from .ir import TABLE, ParsedDoc
+from . import links
 from .llm.client import ChatModel, Embedder
 from .parsers import UnsupportedFormat, parse_file
 from .pii import Detector, PiiMasker, load_detector
@@ -87,7 +88,7 @@ def _mask_section(section: dict, masker: PiiMasker) -> dict:
             "card": f"{path}\n{summary}"}
 
 
-INDEX_VERSION = 1   # bump when parsing/chunking logic changes: sync then rebuilds stale documents
+INDEX_VERSION = 3   # bump when parsing/chunking logic changes: sync then rebuilds stale documents
 
 
 def embedder_id(settings: Settings) -> str:
@@ -223,6 +224,11 @@ class Ingestor:
         status = "review" if pending else "ok"
         meta = self._meta(path, sha, doc, doc_summary, conf, status, words, inf.strategy, pii)
         doc_id = self.store.save_document(meta, doc_vec, payload)
+        if self.s.graph:
+            try:
+                links.refresh(self.store, doc_id)
+            except Exception:   # the graph is an extra: a bad edge must never fail an ingest
+                log.exception("reference graph not updated for %s", path.name)
         queued = self._learn_and_queue(doc_id, doc, inf, decisions)
         return IngestResult("ingested", doc_id, len(payload), len(flat), inf.strategy, conf,
                             len(decisions), queued, doc.warnings, pii=pii)

@@ -14,7 +14,10 @@ from pathlib import Path
 
 import numpy as np
 
-from .textutil import terms
+from .textutil import WORD, terms
+
+REFS_PER_DIRECTION = 5   # references listed per source and direction: a pointer, not a bibliography
+HEAD_CHUNKS = 2   # a document's own identifiers live on its first page
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents(
@@ -32,6 +35,12 @@ CREATE TABLE IF NOT EXISTS chunks(
 CREATE INDEX IF NOT EXISTS chunks_doc ON chunks(doc_id);
 CREATE INDEX IF NOT EXISTS chunks_section ON chunks(section_id);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(ctx, tokenize='unicode61 remove_diacritics 2');
+CREATE TABLE IF NOT EXISTS links(
+  src INTEGER REFERENCES chunks(id) ON DELETE CASCADE, dst_doc INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+  dst_chunk INTEGER REFERENCES chunks(id) ON DELETE CASCADE, kind TEXT, label TEXT);
+CREATE INDEX IF NOT EXISTS links_src ON links(src);
+CREATE INDEX IF NOT EXISTS links_dst_chunk ON links(dst_chunk);
+CREATE INDEX IF NOT EXISTS links_dst_doc ON links(dst_doc);
 CREATE TABLE IF NOT EXISTS review_queue(
   id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
   kind TEXT, block_idx INTEGER, text TEXT, state TEXT, options TEXT, probs TEXT,
@@ -215,6 +224,112 @@ class Store:
     def section_text(self, section_id: int) -> str:
         rows = self.conn.execute("SELECT text FROM chunks WHERE section_id=? ORDER BY ordinal", (section_id,))
         return "\n".join(r[0] for r in rows)
+
+    # ---- reference graph (links.py) ---------------------------------------------------------
+    def doc_chunks(self, doc_id: int) -> list[dict]:
+        rows = self.conn.execute("SELECT id,text,kind,loc FROM chunks WHERE doc_id=? ORDER BY id", (doc_id,))
+        return [dict(r) for r in rows]
+
+    def section_heads(self, doc_id: int) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT s.title, MIN(c.id) AS first_chunk FROM sections s JOIN chunks c ON c.section_id=s.id "
+            "WHERE s.doc_id=? GROUP BY s.id ORDER BY s.ordinal", (doc_id,))
+        return [dict(r) for r in rows]
+
+    def directory_rows(self) -> list[tuple[int, str, str, str]]:
+        """(doc_id, title, path, head text) of every searchable document: what other documents may cite."""
+        out = []
+        for d in self.conn.execute("SELECT id,title,path FROM documents WHERE status != 'needs_ocr'").fetchall():
+            head = self.conn.execute("SELECT text FROM chunks WHERE doc_id=? ORDER BY id LIMIT ?",
+                                     (d["id"], HEAD_CHUNKS)).fetchall()
+            out.append((d["id"], d["title"] or "", d["path"] or "", "\n".join(r[0] for r in head)))
+        return out
+
+    def chunks_matching(self, phrases: list[str], exclude_doc: int, limit: int = 5000) -> list[dict]:
+        """Chunks of other documents that contain any of the phrases (FTS prefilter; callers verify exactly)."""
+        match = " OR ".join(f'"{" ".join(WORD.findall(p.lower()))}"' for p in phrases if WORD.findall(p.lower()))
+        if not match:
+            return []
+        rows = self.conn.execute(
+            "SELECT c.id,c.doc_id,c.text FROM chunk_fts f JOIN chunks c ON c.id=f.rowid "
+            "WHERE chunk_fts MATCH ? AND c.doc_id != ? LIMIT ?", (match, exclude_doc, limit))
+        return [dict(r) for r in rows]
+
+    def delete_links(self, doc_id: int) -> None:
+        """Edges leaving or entering the document (both directions are recomputed on refresh)."""
+        with self._lock, self.conn as c:
+            c.execute("DELETE FROM links WHERE dst_doc=? OR src IN (SELECT id FROM chunks WHERE doc_id=?)",
+                      (doc_id, doc_id))
+
+    def add_links(self, links) -> None:
+        with self._lock, self.conn as c:
+            c.executemany("INSERT INTO links(src,dst_doc,dst_chunk,kind,label) VALUES(?,?,?,?,?)",
+                          [(l.src, l.dst_doc, l.dst_chunk, l.kind, l.label) for l in links])
+
+    def links_out(self, chunk_ids: list[int]) -> list[dict]:
+        if not chunk_ids:
+            return []
+        q = f"SELECT src,dst_doc,dst_chunk,kind,label FROM links WHERE src IN ({','.join('?' * len(chunk_ids))})"
+        return [dict(r) for r in self.conn.execute(q, chunk_ids)]
+
+    def links_in(self, chunk_ids: list[int]) -> list[dict]:
+        """Chunks that point at these chunks (figure / table / section references only)."""
+        if not chunk_ids:
+            return []
+        q = ("SELECT src,dst_doc,dst_chunk,kind,label FROM links "
+             f"WHERE dst_chunk IN ({','.join('?' * len(chunk_ids))})")
+        return [dict(r) for r in self.conn.execute(q, chunk_ids)]
+
+    def neighbours(self, chunk_ids: list[int], limit: int = REFS_PER_DIRECTION) -> dict[str, list[dict]]:
+        """Where the references of these chunks lead ("out") and who cites them ("in"), named for a reader:
+        kind, label as written, document, page, target chunk id (None = a whole cited document)."""
+        own = set(chunk_ids)
+        out, back = self.links_out(chunk_ids), self.links_in(chunk_ids)
+        ids = {r for l in out for r in (l["dst_chunk"],) if r} | {l["src"] for l in back}
+        where = {r["id"]: r for r in self.conn.execute(
+            f"SELECT c.id, c.loc, c.doc_id, d.title FROM chunks c JOIN documents d ON d.id=c.doc_id "
+            f"WHERE c.id IN ({','.join('?' * len(ids))})", list(ids))} if ids else {}
+        titles = {r["id"]: r["title"] for r in self.conn.execute("SELECT id, title FROM documents")}
+
+        def card(l: dict, chunk: int | None, doc: int | None) -> dict | None:
+            if chunk in own:
+                return None
+            w = where.get(chunk)
+            return {"kind": l["kind"], "label": l["label"], "chunk_id": chunk, "doc_id": w["doc_id"] if w else doc,
+                    "doc": w["title"] if w else titles.get(doc, ""), "loc": w["loc"] if w else None}
+
+        def pick(cards) -> list[dict]:
+            seen = {(c["kind"], c["label"], c["chunk_id"], c["doc_id"]): c for c in cards if c}
+            return list(seen.values())[:limit]
+
+        return {"out": pick(card(l, l["dst_chunk"], l["dst_doc"]) for l in out),
+                "in": pick(card(l, l["src"], None) for l in back)}
+
+    def chunk_node(self, chunk_id: int) -> dict | None:
+        """One passage with its place in the document and its references, to open a node of the graph."""
+        r = self.conn.execute(
+            "SELECT c.id, c.doc_id, c.text, c.kind, c.loc, c.ref, d.title AS doc, s.path AS section "
+            "FROM chunks c JOIN documents d ON d.id=c.doc_id JOIN sections s ON s.id=c.section_id WHERE c.id=?",
+            (chunk_id,)).fetchone()
+        return {**dict(r), "refs": self.neighbours([chunk_id])} if r else None
+
+    def graph(self) -> dict:
+        """Document-level view: nodes and edges (how many chunks cite the other document, by kind)."""
+        edges = self.conn.execute(
+            "SELECT c.doc_id AS src, l.dst_doc AS dst, l.kind, COUNT(*) AS n FROM links l "
+            "JOIN chunks c ON c.id=l.src GROUP BY c.doc_id, l.dst_doc, l.kind").fetchall()
+        return {"edges": [dict(e) for e in edges],
+                "nodes": [{"id": d["id"], "title": d["title"]} for d in self.list_documents()]}
+
+    def section_figures(self, section_ids: list[int], per_section: int = 3) -> dict[int, list[str]]:
+        out: dict[int, list[str]] = {}
+        q = ("SELECT section_id, ref FROM chunks WHERE kind='image' AND ref != '' AND section_id IN "
+             f"({','.join('?' * len(section_ids))}) ORDER BY id")
+        for r in self.conn.execute(q, section_ids) if section_ids else []:
+            refs = out.setdefault(r["section_id"], [])
+            if r["ref"] not in refs and len(refs) < per_section:
+                refs.append(r["ref"])
+        return out
 
     # ---- review queue ----------------------------------------------------------------------
     def queue_review(self, doc_id: int, item: dict) -> None:

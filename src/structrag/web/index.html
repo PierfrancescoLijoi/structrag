@@ -35,6 +35,8 @@
   .src b { color:var(--text); } .src pre { display:none; white-space:pre-wrap; margin:6px 0 0; color:var(--text); }
   .src.open pre { display:block; }
   .src.cited { border-color:var(--ok); } .src img { display:block; max-width:100%; max-height:220px; margin-top:6px; border-radius:4px; }
+  .src .ref { margin-top:4px; cursor:pointer; color:var(--text); } .src .ref:hover { text-decoration:underline; }
+  .src .node { margin:4px 0 0 10px; padding-left:8px; border-left:2px solid var(--line); white-space:pre-wrap; }
   .src .quote { margin:6px 0 0; padding-left:8px; border-left:2px solid var(--ok); color:var(--text); font-style:italic; }
   .verdict { margin-top:6px; font-size:11px; } .verdict.ok { color:var(--ok); } .verdict.no { color:var(--warn); }
   .msg.refused .body { color:var(--dim); font-style:italic; }
@@ -82,6 +84,23 @@ const api = async (path, opts = {}) => {
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
   return r;
 };
+// references of a source: click one to read the passage it leads to (or that cites this one) without leaving the answer
+function refList(box, refs) {
+  const rows = [...(refs?.out || []).map((r) => ({ ...r, arrow: '→' })), ...(refs?.in || []).map((r) => ({ ...r, arrow: '←' }))];
+  rows.forEach((r) => {
+    const row = el('div', 'ref', `${r.arrow} ${r.label} · ${r.doc}${r.loc ? ` (${r.loc})` : ''}`);
+    if (r.chunk_id) {
+      let open = null;
+      row.onclick = async () => {
+        if (open) { open.remove(); open = null; return; }
+        const n = await (await api(`/api/chunks/${r.chunk_id}`)).json();
+        open = el('div', 'node', `${n.section}
+${n.text}`); row.after(open);
+      };
+    }
+    box.append(row);
+  });
+}
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
 function renderText(container, text, sources) {
@@ -109,7 +128,9 @@ function setSources(list, sources, cited = false) {
     head.style.cursor = 'pointer'; head.onclick = () => d.classList.toggle('open');
     d.append(head);
     if (s.evidence) d.append(el('div', 'quote', s.evidence));
-    if (s.image) { const img = el('img'); img.src = `/api/images/${s.image}`; img.alt = 'cited figure'; img.loading = 'lazy'; d.append(img); }
+    if (s.via) d.append(el('div', 'dim', `linked: ${s.via}`));
+    refList(d, s.refs);
+    (s.images && s.images.length ? s.images : s.image ? [s.image] : []).forEach((ref) => { const img = el('img'); img.src = `/api/images/${ref}`; img.alt = 'figure'; img.loading = 'lazy'; d.append(img); });
     d.append(el('pre', '', s.text)); list.append(d);
   });
 }
@@ -224,11 +245,15 @@ async function loadOverview() {
   let s;
   try { s = await (await api('/api/stats')).json(); }
   catch (e) { return $('overview').replaceChildren(el('div', 'dim', 'Could not load stats: ' + e.message)); }
+  const g = await (await api('/api/graph')).json().catch(() => ({ nodes: [], edges: [] }));
+  const title = Object.fromEntries(g.nodes.map((n) => [n.id, n.title])), cites = {};
+  g.edges.filter((e) => e.src !== e.dst).forEach((e) => { const k = `${title[e.src]} → ${title[e.dst]}`; cites[k] = (cites[k] || 0) + e.n; });
+  const top = Object.fromEntries(Object.entries(cites).sort((a, b) => b[1] - a[1]).slice(0, 15));
   const wrap = el('div', 'wrap'), tiles = el('div', 'tiles');
   [['Documents', s.documents], ['Sections', s.sections], ['Chunks', s.chunks], ['Words', s.words.toLocaleString()],
    ['To review', s.pending_reviews], ['Docs with PII', s.pii.docs_with_pii]].forEach(([k, v]) => { const t = el('div', 'tile'); t.append(el('b', '', v), el('span', 'dim', k)); tiles.append(t); });
   const note = el('div', 'dim', s.pii.mode === 'mask' ? `PII masking on (${s.pii.model}): identifiers are replaced before indexing.` : 'PII masking off. Start with STRUCTRAG_PII_MODE=mask to enable it.');
-  wrap.append(tiles, bars('Documents by status', s.by_status), bars('Documents by format', s.by_format), bars('Masked PII values by type', s.pii.by_label), note);
+  wrap.append(tiles, bars('Documents by status', s.by_status), bars('Documents by format', s.by_format), bars('Masked PII values by type', s.pii.by_label), bars('Documents citing other documents (chunks)', top), note);
   $('overview').replaceChildren(wrap);
 }
 $('overviewbtn').onclick = () => { showPanel('overview'); loadOverview(); };

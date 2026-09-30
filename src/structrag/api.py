@@ -102,6 +102,11 @@ def create_app(services: Services) -> FastAPI:
                 "grounding": services.settings.grounding, "local_embed_model": services.settings.local_embed_model,
                 "documents": len(services.store.list_documents())}
 
+    @app.get("/api/graph")
+    def graph() -> dict:
+        """Which documents cite which (chunk-level references rolled up per document pair and kind)."""
+        return services.store.graph()
+
     @app.get("/api/stats")
     def stats() -> dict:
         docs = services.store.list_documents()
@@ -155,6 +160,13 @@ def create_app(services: Services) -> FastAPI:
     def list_jobs() -> list[dict]:
         with jobs_lock:
             return list(jobs.values())
+
+    @app.get("/api/chunks/{chunk_id}")
+    def chunk(chunk_id: int) -> dict:
+        node = services.store.chunk_node(chunk_id)
+        if node is None:
+            raise HTTPException(404, "passage not found")
+        return node
 
     @app.get("/api/docs")
     def docs() -> list[dict]:
