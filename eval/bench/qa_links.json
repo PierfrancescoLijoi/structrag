@@ -1,0 +1,7 @@
+[
+ {"id":"lnk01","doc":"llama2.pdf","type":"text","q":"Which Llama 2 model sizes use Grouped-Query Attention (GQA)?","evidence":["34B","70B","Grouped-Query Attention"],"answer":[["34b","70b"]]},
+ {"id":"lnk02","doc":"llama2.pdf","type":"text","q":"In the Llama 2 pretraining loss curves, did the models show signs of saturation after 2T tokens?","evidence":["did not show any sign of saturation"],"answer":[["not","saturat"],["no sign","saturat"],["not","saturation"]]},
+ {"id":"lnk03","doc":"attention.pdf","type":"text","q":"In the Transformer paper's figure with Scaled Dot-Product Attention on the left, what is shown on the right?","evidence":["Multi-Head Attention"],"answer":[["multi-head attention"]]},
+ {"id":"lnk04","doc":"gan.pdf","type":"text","q":"In the GAN training illustration, what does the blue dashed line represent?","evidence":["discriminative distribution","blue"],"answer":[["discriminative distribution"],["discriminator"]]},
+ {"id":"lnk05","doc":"llama2.pdf","type":"text","q":"What does the Llama 2 table on context length ablation compare?","evidence":["Context length ablation"],"answer":[["context length"]]}
+]

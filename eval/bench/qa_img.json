@@ -1,0 +1,362 @@
+[
+ {
+  "id": "sb1",
+  "doc": "scan_bert.pdf",
+  "type": "scanned",
+  "q": "How many parameters does BERT-BASE have?",
+  "evidence": [],
+  "answer": [
+   [
+    "110m"
+   ],
+   [
+    "110 million"
+   ]
+  ]
+ },
+ {
+  "id": "sb2",
+  "doc": "scan_bert.pdf",
+  "type": "scanned",
+  "q": "What vocabulary size does the WordPiece tokenizer used by BERT have?",
+  "evidence": [],
+  "answer": [
+   [
+    "30,000"
+   ],
+   [
+    "30000"
+   ]
+  ]
+ },
+ {
+  "id": "sb3",
+  "doc": "scan_bert.pdf",
+  "type": "scanned",
+  "q": "What percentage of tokens does BERT mask in the masked LM task?",
+  "evidence": [],
+  "answer": [
+   [
+    "15%"
+   ],
+   [
+    "15 percent"
+   ]
+  ]
+ },
+ {
+  "id": "sb4",
+  "doc": "scan_bert.pdf",
+  "type": "scanned",
+  "q": "Which corpora was BERT pre-trained on?",
+  "evidence": [],
+  "answer": [
+   [
+    "bookscorpus",
+    "wikipedia"
+   ]
+  ]
+ },
+ {
+  "id": "sb5",
+  "doc": "scan_bert.pdf",
+  "type": "scanned",
+  "q": "What GLUE score did BERT reach?",
+  "evidence": [],
+  "answer": [
+   [
+    "80.5"
+   ]
+  ]
+ },
+ {
+  "id": "sl1",
+  "doc": "scan_leonardo_it.pdf",
+  "type": "scanned",
+  "q": "Dove e quando nacque Leonardo da Vinci?",
+  "evidence": [],
+  "answer": [
+   [
+    "anchiano",
+    "15 aprile 1452"
+   ]
+  ]
+ },
+ {
+  "id": "sl2",
+  "doc": "scan_leonardo_it.pdf",
+  "type": "scanned",
+  "q": "Presso quale maestro fu messo a bottega Leonardo?",
+  "evidence": [],
+  "answer": [
+   [
+    "verrocchio"
+   ]
+  ]
+ },
+ {
+  "id": "sg1",
+  "doc": "scan_galileo_it.pdf",
+  "type": "scanned",
+  "q": "Dove e quando nacque Galileo Galilei?",
+  "evidence": [],
+  "answer": [
+   [
+    "pisa",
+    "15 febbraio 1564"
+   ]
+  ]
+ },
+ {
+  "id": "sg2",
+  "doc": "scan_galileo_it.pdf",
+  "type": "scanned",
+  "q": "Quando fu costretto Galileo all'abiura?",
+  "evidence": [],
+  "answer": [
+   [
+    "22 giugno 1633"
+   ]
+  ]
+ },
+ {
+  "id": "sn1",
+  "doc": "scan_gan.pdf",
+  "type": "scanned",
+  "q": "What kind of game do the two networks play in the adversarial framework?",
+  "evidence": [],
+  "answer": [
+   [
+    "minimax"
+   ]
+  ]
+ },
+ {
+  "id": "sn2",
+  "doc": "scan_gan.pdf",
+  "type": "scanned",
+  "q": "How does the training procedure alternate between the discriminator and the generator?",
+  "evidence": [],
+  "answer": [
+   [
+    "k steps",
+    "one step"
+   ]
+  ]
+ },
+ {
+  "id": "fg1",
+  "doc": "chart_revenue_2024.png",
+  "type": "figure",
+  "q": "What was the revenue in Q3 2024 according to the revenue chart?",
+  "evidence": [],
+  "answer": [
+   [
+    "19.3"
+   ]
+  ]
+ },
+ {
+  "id": "fg2",
+  "doc": "chart_revenue_2024.png",
+  "type": "figure",
+  "q": "Which quarter had the highest revenue in 2024?",
+  "evidence": [],
+  "answer": [
+   [
+    "q4"
+   ],
+   [
+    "fourth"
+   ]
+  ]
+ },
+ {
+  "id": "fg3",
+  "doc": "chart_market_share.png",
+  "type": "figure",
+  "q": "What market share does Beta have?",
+  "evidence": [],
+  "answer": [
+   [
+    "27%"
+   ]
+  ]
+ },
+ {
+  "id": "fg4",
+  "doc": "chart_market_share.png",
+  "type": "figure",
+  "q": "Which company has the largest smartphone market share?",
+  "evidence": [],
+  "answer": [
+   [
+    "alpha"
+   ]
+  ]
+ },
+ {
+  "id": "fg5",
+  "doc": "table_specs.png",
+  "type": "figure",
+  "q": "What is the rated power of the Compressor C2?",
+  "evidence": [],
+  "answer": [
+   [
+    "315"
+   ]
+  ]
+ },
+ {
+  "id": "fg6",
+  "doc": "table_specs.png",
+  "type": "figure",
+  "q": "What is the maximum pressure of the Turbine T3?",
+  "evidence": [],
+  "answer": [
+   [
+    "85"
+   ]
+  ]
+ },
+ {
+  "id": "fg7",
+  "doc": "invoice_scan.png",
+  "type": "figure",
+  "q": "What is the total amount of invoice 2024-0193?",
+  "evidence": [],
+  "answer": [
+   [
+    "1284.50"
+   ],
+   [
+    "1,284.50"
+   ]
+  ]
+ },
+ {
+  "id": "fg8",
+  "doc": "invoice_scan.png",
+  "type": "figure",
+  "q": "What is the due date of the invoice?",
+  "evidence": [],
+  "answer": [
+   [
+    "15 march 2025"
+   ]
+  ]
+ },
+ {
+  "id": "fg9",
+  "doc": "diagram_pipeline.png",
+  "type": "figure",
+  "q": "Which step comes right after Chunk in the document pipeline diagram?",
+  "evidence": [],
+  "answer": [
+   [
+    "embed"
+   ]
+  ]
+ },
+ {
+  "id": "fg10",
+  "doc": "chart_employees.png",
+  "type": "figure",
+  "q": "How many employees are there in Germany?",
+  "evidence": [],
+  "answer": [
+   [
+    "210"
+   ]
+  ]
+ },
+ {
+  "id": "fg11",
+  "doc": "chart_employees.png",
+  "type": "figure",
+  "q": "Which country has the fewest employees?",
+  "evidence": [],
+  "answer": [
+   [
+    "spain"
+   ]
+  ]
+ },
+ {
+  "id": "fg12",
+  "doc": "chart_temperature.png",
+  "type": "figure",
+  "q": "What was the peak temperature and in which month?",
+  "evidence": [],
+  "answer": [
+   [
+    "26.4",
+    "july"
+   ]
+  ]
+ },
+ {
+  "id": "ut1",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What was the revenue in Q5 2024?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut2",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What market share does Delta have?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut3",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What is the rated power of the Compressor C9?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut4",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What is the VAT number on invoice 2024-0193?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut5",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "How many employees are there in Japan?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut6",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "How many GPUs were used to pre-train BERT?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut7",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "Quanti figli ebbe Leonardo da Vinci?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ut8",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What is the capital of Australia?",
+  "evidence": [],
+  "answer": null
+ }
+]

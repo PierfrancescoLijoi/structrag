@@ -1,0 +1,326 @@
+[
+ {
+  "id": "tr01",
+  "doc": "attention.pdf",
+  "type": "unanswerable",
+  "q": "What BLEU score did the Transformer obtain on English-to-Romanian translation?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "romanian"
+  ]
+ },
+ {
+  "id": "tr02",
+  "doc": "attention.pdf",
+  "type": "unanswerable",
+  "q": "What was the training cost in US dollars of the big Transformer model?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "dollar",
+   "\\$\\d"
+  ]
+ },
+ {
+  "id": "tr03",
+  "doc": "attention.pdf",
+  "type": "unanswerable",
+  "q": "What dropout rate was used for the English-to-Spanish model?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "spanish"
+  ]
+ },
+ {
+  "id": "tr04",
+  "doc": "rag_lewis.pdf",
+  "type": "unanswerable",
+  "q": "How many TPUs were used to train the RAG models?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\btpus?\\b"
+  ]
+ },
+ {
+  "id": "tr05",
+  "doc": "rag_lewis.pdf",
+  "type": "unanswerable",
+  "q": "What BLEU score does RAG obtain on WMT machine translation?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "wmt"
+  ]
+ },
+ {
+  "id": "tr06",
+  "doc": "bert.pdf",
+  "type": "unanswerable",
+  "q": "What was the total pre-training cost of BERT in dollars?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "dollar",
+   "\\$\\d"
+  ]
+ },
+ {
+  "id": "tr07",
+  "doc": "bert.pdf",
+  "type": "unanswerable",
+  "q": "How many GPUs were used to pre-train BERT-LARGE?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\d+ ?gpus?"
+  ]
+ },
+ {
+  "id": "tr08",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "unanswerable",
+  "q": "How many parameters does GPT-4 have?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "gpt-4"
+  ]
+ },
+ {
+  "id": "tr09",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "unanswerable",
+  "q": "Under which open-source license were the GPT-3 weights released?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "license",
+   "licence"
+  ]
+ },
+ {
+  "id": "tr10",
+  "doc": "resnet.pdf",
+  "type": "unanswerable",
+  "q": "What top-1 accuracy did ResNet-152 reach on CIFAR-100?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "cifar-100"
+  ]
+ },
+ {
+  "id": "tr11",
+  "doc": "gan.pdf",
+  "type": "unanswerable",
+  "q": "What FID score did the GAN reach on CIFAR-10?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\bfid\\b"
+  ]
+ },
+ {
+  "id": "tr12",
+  "doc": "chain_of_thought.pdf",
+  "type": "unanswerable",
+  "q": "How many chain-of-thought exemplars were used with GPT-4?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "gpt-4"
+  ]
+ },
+ {
+  "id": "tr13",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "unanswerable",
+  "q": "How many chloroplasts are there in a single oak leaf?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "oak"
+  ]
+ },
+ {
+  "id": "tr14",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "unanswerable",
+  "q": "Quanto pesava in grammi la tavola della Gioconda?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\bgrammi\\b"
+  ]
+ },
+ {
+  "id": "tr15",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "unanswerable",
+  "q": "Qual è il quarantesimo numero di Fibonacci?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "102334155",
+   "102 334 155"
+  ]
+ },
+ {
+  "id": "tr16",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "unanswerable",
+  "q": "Quanto pesava in chilogrammi il cannocchiale di Galileo?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "chilogramm"
+  ]
+ },
+ {
+  "id": "tr17",
+  "doc": "wiki_it_dante.pdf",
+  "type": "unanswerable",
+  "q": "Quanti euro vale oggi un'edizione originale del Convivio?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "edizione originale"
+  ]
+ },
+ {
+  "id": "tr18",
+  "doc": "wiki_en_turing.pdf",
+  "type": "unanswerable",
+  "q": "What was Alan Turing's IQ score?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\biq\\b"
+  ]
+ },
+ {
+  "id": "tr19",
+  "doc": "wiki_en_turing.pdf",
+  "type": "unanswerable",
+  "q": "Which restaurant did Turing visit every Friday in Manchester?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "restaurant"
+  ]
+ },
+ {
+  "id": "tr20",
+  "doc": "wiki_en_mars.pdf",
+  "type": "unanswerable",
+  "q": "What is the floor area in square meters of the first Mars colony building?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "square meter",
+   "floor area"
+  ]
+ },
+ {
+  "id": "tr21",
+  "doc": "science-exploration-369p.pptx",
+  "type": "unanswerable",
+  "q": "How many petabytes of storage does the SEDVME use?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "petabyte"
+  ]
+ },
+ {
+  "id": "tr22",
+  "doc": "berkshire_2022.pdf",
+  "type": "unanswerable",
+  "q": "How many employees does Berkshire Hathaway have in Germany?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "germany"
+  ]
+ },
+ {
+  "id": "tr23",
+  "doc": "nist_ai_rmf.pdf",
+  "type": "unanswerable",
+  "q": "What fine can a company face for violating the AI RMF?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "\\bfines?\\b(?!-)",
+   "penalt"
+  ]
+ },
+ {
+  "id": "tr24",
+  "doc": "handbook-872p.docx",
+  "type": "unanswerable",
+  "q": "What is the home address of the Director of the Executive Office for United States Trustees?",
+  "evidence": [],
+  "answer": null,
+  "absent": [
+   "home address"
+  ]
+ },
+ {
+  "id": "tr25",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What is the capital of Australia?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ },
+ {
+  "id": "tr26",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "Who won the 2018 FIFA World Cup?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ },
+ {
+  "id": "tr27",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "What is the boiling point of water at sea level in Celsius?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ },
+ {
+  "id": "tr28",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "Chi ha scritto I Promessi Sposi?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ },
+ {
+  "id": "tr29",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "How do I bake sourdough bread at home?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ },
+ {
+  "id": "tr30",
+  "doc": "*",
+  "type": "unanswerable",
+  "q": "Qual è la formula chimica del sale da cucina?",
+  "evidence": [],
+  "answer": null,
+  "absent": []
+ }
+]
