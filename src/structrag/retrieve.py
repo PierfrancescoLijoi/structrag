@@ -17,6 +17,7 @@ CANDIDATES = 40
 TOP_SECTIONS = 10
 SECTION_WEIGHT = 0.5
 EXPAND_WORDS = 350   # sections up to this size are passed to the model whole
+MIN_CONTEXT_CHARS = 400   # do not bother adding a source with less room than this
 
 
 @dataclass(frozen=True)
@@ -115,15 +116,24 @@ class Retriever:
                 break
         return hits
 
-    def build_context(self, hits: list[Hit]) -> list[Context]:
-        """Merge hits per section; expand small sections to their full text."""
+    def build_context(self, hits: list[Hit], max_chars: int | None = None) -> list[Context]:
+        """Merge hits per section (best-ranked first); expand small sections to their full text.
+        Stops at `max_chars` so the prompt always fits the model window."""
+        budget = max_chars or self.s.context_max_chars
         order: dict[int, list[Hit]] = {}
         for h in hits:
             order.setdefault(h.section_id, []).append(h)
-        out = []
-        for n, (section_id, group) in enumerate(order.items(), 1):
+        out: list[Context] = []
+        for section_id, group in order.items():
             full = self.store.section_text(section_id)
-            text = full if len(full.split()) <= EXPAND_WORDS else "\n\n".join(h.text for h in group)
+            text = full if len(full.split()) <= EXPAND_WORDS and len(full) <= budget else "\n\n".join(h.text for h in group)
+            if len(text) > budget:
+                if out and budget < MIN_CONTEXT_CHARS:
+                    break
+                text = text[:budget]
             first = group[0]
-            out.append(Context(n, first.doc_id, first.doc_title, first.section_path, first.loc, text))
+            out.append(Context(len(out) + 1, first.doc_id, first.doc_title, first.section_path, first.loc, text))
+            budget -= len(text)
+            if budget <= 0:
+                break
         return out

@@ -14,6 +14,7 @@ from ..config import Settings
 MAX_THREADS = 6
 EMBED_BATCH = 16
 RERANK_BATCH = 8
+MAX_WINDOWS = 3
 
 # Models fastembed does not ship: (dim, onnx file in the HF repo, query prefix, passage prefix).
 # E5 models are trained with these prefixes and lose accuracy without them.
@@ -84,13 +85,22 @@ class LocalReranker:
         self.model = TextCrossEncoder(name, threads=_threads(settings))
         self.max_chars = settings.rerank_max_chars
 
+    def _windows(self, text: str) -> list[str]:
+        """Passages longer than the model limit are scored window by window (the answer is often mid-text)."""
+        if len(text) <= self.max_chars:
+            return [text]
+        step = self.max_chars * 2 // 3
+        return [text[i:i + self.max_chars] for i in range(0, len(text) - self.max_chars // 3, step)][:MAX_WINDOWS]
+
     def scores(self, query: str, passages: list[str]) -> list[float]:
+        """Relevance per passage = best score over its windows."""
         if not passages:
             return []
+        pairs = [(i, w) for i, p in enumerate(passages) for w in self._windows(p)]
         # Batches are padded to their longest member: sorting by length removes most of the wasted compute.
-        order = sorted(range(len(passages)), key=lambda i: len(passages[i]))
-        raw = self.model.rerank(query, [passages[i][:self.max_chars] for i in order], batch_size=RERANK_BATCH)
-        out = [0.0] * len(passages)
-        for i, s in zip(order, raw):
-            out[i] = float(s)
+        pairs.sort(key=lambda t: len(t[1]))
+        raw = self.model.rerank(query, [w for _, w in pairs], batch_size=RERANK_BATCH)
+        out = [float("-inf")] * len(passages)
+        for (i, _), s in zip(pairs, raw):
+            out[i] = max(out[i], float(s))
         return out

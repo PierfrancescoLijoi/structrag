@@ -17,7 +17,7 @@ class Settings:
     chat_model: str = field(default_factory=lambda: _env("CHAT_MODEL", "qwen3:4b-instruct-2507-q4_K_M"))
     embed_model: str = field(default_factory=lambda: _env("EMBED_MODEL", "qwen3-embedding:0.6b"))
     # "server" = OpenAI-compatible /embeddings; "local" = ONNX on CPU (fastembed); "hash" = offline lexical.
-    embedder: str = field(default_factory=lambda: _env("EMBEDDER", "server"))
+    embedder: str = field(default_factory=lambda: _env("EMBEDDER", "local"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", "data")))
     profiles_dir: Path = field(default_factory=lambda: Path(_env("PROFILES_DIR", "profiles")))
 
@@ -36,6 +36,7 @@ class Settings:
     summary_mode: str = field(default_factory=lambda: _env("SUMMARY_MODE", "lead"))  # lead | llm
 
     # Retrieval.
+    context_max_chars: int = 9000   # ~4-5k tokens: numbers tokenise ~1 token/char, window is 8k
     top_docs: int = 5
     top_chunks: int = 8
     doc_prefilter_min_docs: int = 8
@@ -46,7 +47,7 @@ class Settings:
                                                                  "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"))
     local_threads: int = field(default_factory=lambda: int(_env("LOCAL_THREADS", "0")))   # 0 = auto (half the cores)
     local_max_chars: int = 2400
-    rerank: str = field(default_factory=lambda: _env("RERANK", "off"))                    # off | local
+    rerank: str = field(default_factory=lambda: _env("RERANK", "local"))                    # off | local (cross-encoder on the top candidates)
     rerank_candidates: int = 15
     rerank_max_chars: int = 1200   # cross-encoder cost is ~linear in text length
 
