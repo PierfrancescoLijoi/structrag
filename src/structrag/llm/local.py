@@ -6,6 +6,7 @@ machine stays usable while ingesting.
 from __future__ import annotations
 
 import os
+import platform
 
 import numpy as np
 
@@ -82,6 +83,8 @@ class LocalReranker:
         if name in CUSTOM_RERANKERS and name not in {m["model"] for m in TextCrossEncoder.list_supported_models()}:
             from fastembed.common.model_description import ModelSource
             repo, model_file, size = CUSTOM_RERANKERS[name]
+            if name.endswith("-int8") and platform.machine().lower() in ("arm64", "aarch64"):
+                model_file = "onnx/model_qint8_arm64.onnx"
             TextCrossEncoder.add_custom_model(model=name, sources=ModelSource(hf=repo), model_file=model_file,
                                               size_in_gb=size)
         self.model = TextCrossEncoder(name, threads=_threads(settings))

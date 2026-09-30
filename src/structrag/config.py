@@ -44,11 +44,11 @@ class Settings:
     # Local (CPU, ONNX) models used when embedder="local" / rerank="local".
     local_embed_model: str = field(default_factory=lambda: _env("LOCAL_EMBED_MODEL", "intfloat/multilingual-e5-small"))
     local_rerank_model: str = field(default_factory=lambda: _env("LOCAL_RERANK_MODEL",
-                                                                 "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"))
+                                                                 "mmarco-mMiniLMv2-int8"))
     local_threads: int = field(default_factory=lambda: int(_env("LOCAL_THREADS", "0")))   # 0 = auto (half the cores)
     local_max_chars: int = 2400
     rerank: str = field(default_factory=lambda: _env("RERANK", "local"))                    # off | local (cross-encoder on the top candidates)
-    rerank_candidates: int = 15
+    rerank_candidates: int = 30
     rerank_max_chars: int = 1200   # cross-encoder cost is ~linear in text length
 
     # PII: "off" | "mask" (rizzo-pii replaces identifiers with placeholders before embedding/storage).
