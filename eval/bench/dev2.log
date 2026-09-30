@@ -1,0 +1,41 @@
+C:\Users\pf23l\PycharmProjects\structrag\.venv\Lib\site-packages\huggingface_hub\utils\tqdm.py:176: UserWarning: Cannot enable progress bars: environment variable `HF_HUB_DISABLE_PROGRESS_BARS=1` is set and has priority.
+  warnings.warn(
+  ingest 2023-half-year-analyses-by-segment.xlsx       ingested     43 chunks   14.7s
+  ingest attention.pdf                                 ingested     50 chunks    8.2s
+  ingest berkshire_2022.pdf                            ingested     43 chunks    6.5s
+  ingest category-level.docx                           ingested      4 chunks    0.4s
+  ingest docx-tables.docx                              ingested      6 chunks    0.1s
+  ingest financial_sample.xlsx                         ingested     70 chunks   13.3s
+  ingest handbook-872p.docx                            ingested    943 chunks   57.7s
+  ingest llama2.pdf                                    ingested    318 chunks   66.5s
+  ingest nist_ai_rmf.pdf                               ingested    116 chunks   10.6s
+  ingest rag_lewis.pdf                                 ingested     74 chunks    9.3s
+  ingest science-exploration-369p.pptx                 ingested    386 chunks   17.5s
+  ingest stanley-cups.xlsx                             ingested      2 chunks    5.6s
+  ingest vodafone.xlsx                                 ingested      6 chunks    3.0s
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+Could not get FontBBox from font descriptor because None cannot be parsed as 4 floats
+  ingest wiki_it_divina_commedia.pdf                   ingested    197 chunks   34.8s
+  ingest wiki_it_roma.pdf                              ingested    262 chunks   43.9s
+
+== dev2: 80 questions, 73 with evidence ==
+hit@1  chunk:  84.9%   doc: 100.0%
+hit@3  chunk:  94.5%   doc: 100.0%
+hit@5  chunk:  95.9%   doc: 100.0%
+hit@8  chunk:  97.3%   doc: 100.0%
+context hit (as shown to LLM):  97.3%
+retrieval latency: median 1358 ms, p95 2731 ms
+  number       n= 39 hit@5 100.0%
+  table        n=  7 hit@5 100.0%
+  text         n= 27 hit@5  88.9%
+ANSWER ACCURACY: 78/80 = 97.5%
+  number       n= 39 acc 100.0%
+  table        n=  7 acc  85.7%
+  text         n= 27 acc  96.3%
+  unanswerable n=  7 acc 100.0%
+retrieval misses @5: ['rag04', 'rag08', 'ppt03']
+wrong answers: ['att10', 'ppt03']

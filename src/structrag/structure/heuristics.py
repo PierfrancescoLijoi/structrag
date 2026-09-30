@@ -15,19 +15,22 @@ MAX_HEADING_CHARS = 120
 MAX_HEADING_SHARE = 0.60       # more candidates than this share of blocks => layout is suspect
 MAX_WEAK_SHARE = 0.60          # bold-only candidates are dropped beyond this share
 MIN_BLOCKS_FOR_SHARE = 20      # tiny documents legitimately have a high title:body ratio
-LARGER_THAN_BODY = 1.10        # size ratio that makes a heading "strong"
+LARGER_THAN_BODY = 1.05        # size ratio that makes a heading "strong" ...
+MIN_SIZE_GAP_PT = 0.75         # ... provided it is also at least this many points larger (12pt over 11pt body)
 MAX_LEVELS = 4
 MIN_NUMBERED_HITS = 3
 LONG_DOC_WORDS = 800           # docs longer than this with no headings need the agent
 SHAPE_MAX_WORDS = 10
 
-NUMBERED = re.compile(r"^(?P<num>\d{1,2}(?:\.\d{1,2}){0,4})[.)]?\s+(?P<rest>[A-ZÀ-Ý0-9\"'(].*)$")
+# "3.2 Method", "A.2 Pre-training Procedure" (paper appendices), and a lone "A Additional Details".
+NUMBERED = re.compile(r"^(?P<num>(?:\d{1,2}|[A-Z])(?:\.\d{1,2}){0,4})[.)]?\s+(?P<rest>[A-ZÀ-Ý0-9\"'(].*)$")
 KEYWORD = re.compile(
     r"^(chapter|capitolo|section|sezione|part|parte|appendix|appendice|allegato|articolo|art\.)\s+"
     r"([0-9]+|[ivxlc]+|[a-z])\b", re.I)
 TRAILING = tuple(".,;")
 MIN_HEADING_LETTERS = 3
-MIN_LETTER_SHARE = 0.5         # table rows ("73.7 79.4 84.6") and figure debris are not headings
+MIN_LETTER_SHARE = 0.3         # letters / (letters + digits): table rows ("73.7 79.4 84.6") are not headings,
+                               # but "Firenze (1468-1482)" and "Table 8" are
 
 
 @dataclass(frozen=True)
@@ -50,9 +53,9 @@ def dominant_style(blocks: tuple[Block, ...]) -> str:
 
 
 def _wordlike(text: str) -> bool:
-    compact = [c for c in text if not c.isspace()]
-    letters = sum(c.isalpha() for c in compact)
-    return letters >= MIN_HEADING_LETTERS and letters / len(compact) >= MIN_LETTER_SHARE
+    letters = sum(c.isalpha() for c in text)
+    digits = sum(c.isdigit() for c in text)
+    return letters >= MIN_HEADING_LETTERS and letters / (letters + digits) >= MIN_LETTER_SHARE
 
 
 def _headingish(b: Block) -> bool:
@@ -105,7 +108,7 @@ def _typography(blocks: tuple[Block, ...]) -> dict[int, tuple[int, bool]]:
     for i, b in enumerate(blocks):
         if not _headingish(b):
             continue
-        if body and b.size and b.size >= body * LARGER_THAN_BODY:
+        if body and b.size and b.size >= body * LARGER_THAN_BODY and b.size - body >= MIN_SIZE_GAP_PT:
             cands[i] = (b.size, True)
         elif b.bold and not body_bold and (not body or not b.size or abs(b.size - body) <= 0.5):
             cands[i] = (b.size or 0.0, False)   # bold-only: size unknown or equal to body

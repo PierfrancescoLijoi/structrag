@@ -105,3 +105,26 @@ def test_files_still_being_written_are_left_for_next_round(sv):
     assert not sv.syncer.run().changed
     sv.syncer.settle = 0
     assert sv.syncer.run().added == ["big.md"]
+
+
+def test_concurrent_ingest_of_same_file_is_safe(sv):
+    import threading
+    f = sv.settings.inbox_dir / "race.md"
+    _write(f, {"Topic": "Two workers race to index this very same file."})
+    results = []
+    threads = [threading.Thread(target=lambda: results.append(sv.ingestor.ingest_file(f).status)) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert sorted(results) == ["duplicate"] * 3 + ["ingested"] and len(sv.store.list_documents()) == 1
+
+
+def test_api_sync_endpoint_reports_changes(sv):
+    from fastapi.testclient import TestClient
+    from structrag.api import create_app
+    client = TestClient(create_app(sv))
+    f = sv.settings.inbox_dir / "api.md"
+    _write(f, {"Topic": "Body for the API sync endpoint."})
+    r = client.post("/api/inbox/scan", headers={"X-Requested-With": "t"}).json()
+    assert r["added"] == ["api.md"] and r["failed"] == {}
+    f.unlink()
+    assert client.post("/api/inbox/scan", headers={"X-Requested-With": "t"}).json()["removed"] == ["api.md"]

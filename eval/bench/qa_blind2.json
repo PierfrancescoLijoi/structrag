@@ -1,0 +1,867 @@
+[
+ {
+  "id": "res01",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What is the maximum depth of the residual nets evaluated on ImageNet?",
+  "evidence": [
+   "up to 152 layers"
+  ],
+  "answer": [
+   [
+    "152"
+   ]
+  ]
+ },
+ {
+  "id": "res02",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What top-5 error did the ensemble of residual nets achieve on the ImageNet test set?",
+  "evidence": [
+   "achieves 3.57% error"
+  ],
+  "answer": [
+   [
+    "3.57"
+   ]
+  ]
+ },
+ {
+  "id": "res03",
+  "doc": "resnet.pdf",
+  "type": "text",
+  "q": "Which competition and year did the ResNet ensemble win 1st place in?",
+  "evidence": [
+   "1st place on the ILSVRC 2015 classiﬁcation task"
+  ],
+  "answer": [
+   [
+    "ilsvrc 2015"
+   ]
+  ]
+ },
+ {
+  "id": "res04",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What mini-batch size is used to train the residual networks with SGD?",
+  "evidence": [
+   "mini-batch size of 256"
+  ],
+  "answer": [
+   [
+    "256"
+   ]
+  ]
+ },
+ {
+  "id": "res05",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What weight decay and momentum are used when training ResNets?",
+  "evidence": [
+   "weight decay of 0.0001",
+   "momentum of 0.9"
+  ],
+  "answer": [
+   [
+    "0.0001",
+    "0.9"
+   ]
+  ]
+ },
+ {
+  "id": "res06",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What starting learning rate is used and by what factor is it divided when the error plateaus?",
+  "evidence": [
+   "starts from 0.1 and is divided by 10"
+  ],
+  "answer": [
+   [
+    "0.1",
+    "10"
+   ]
+  ]
+ },
+ {
+  "id": "res07",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "What relative improvement did ResNets give on the COCO object detection dataset?",
+  "evidence": [
+   "28% relative improvement"
+  ],
+  "answer": [
+   [
+    "28%"
+   ],
+   [
+    "28 percent"
+   ]
+  ]
+ },
+ {
+  "id": "res08",
+  "doc": "resnet.pdf",
+  "type": "number",
+  "q": "How many layers were used in the deepest CIFAR-10 network the paper explores?",
+  "evidence": [
+   "1202"
+  ],
+  "answer": [
+   [
+    "1202"
+   ]
+  ]
+ },
+ {
+  "id": "res09",
+  "doc": "resnet.pdf",
+  "type": "unanswerable",
+  "q": "How many GPU-days did it take to train ResNet-152?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "gan01",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "What kind of game do the two networks play in the adversarial framework?",
+  "evidence": [
+   "minimax two-player game"
+  ],
+  "answer": [
+   [
+    "minimax"
+   ]
+  ]
+ },
+ {
+  "id": "gan02",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "How are the generator and discriminator defined so that the system can be trained with backpropagation?",
+  "evidence": [
+   "deﬁned by multilayer perceptrons"
+  ],
+  "answer": [
+   [
+    "multilayer perceptron"
+   ]
+  ]
+ },
+ {
+  "id": "gan03",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "Which datasets were the adversarial nets trained on?",
+  "evidence": [
+   "MNIST",
+   "Toronto Face Database",
+   "CIFAR-10"
+  ],
+  "answer": [
+   [
+    "mnist",
+    "toronto face database",
+    "cifar-10"
+   ]
+  ]
+ },
+ {
+  "id": "gan04",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "How is the probability of the test set estimated under the generator distribution?",
+  "evidence": [
+   "Gaussian Parzen window"
+  ],
+  "answer": [
+   [
+    "parzen"
+   ]
+  ]
+ },
+ {
+  "id": "gan05",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "What is not needed during either training or generation in this framework?",
+  "evidence": [
+   "no need for any Markov chains"
+  ],
+  "answer": [
+   [
+    "markov chain"
+   ]
+  ]
+ },
+ {
+  "id": "gan06",
+  "doc": "gan.pdf",
+  "type": "text",
+  "q": "How does the training procedure alternate between the discriminator and the generator?",
+  "evidence": [
+   "alternate between k steps of optimizing D and one step of optimizing G"
+  ],
+  "answer": [
+   [
+    "k steps",
+    "one step"
+   ]
+  ]
+ },
+ {
+  "id": "gan07",
+  "doc": "gan.pdf",
+  "type": "unanswerable",
+  "q": "What was the total training time in hours on the MNIST dataset?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "cot01",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "Which model and how many exemplars achieved state-of-the-art accuracy on GSM8K with chain-of-thought prompting?",
+  "evidence": [
+   "PaLM 540B with just eight chain-of-thought exemplars"
+  ],
+  "answer": [
+   [
+    "palm 540b",
+    "eight"
+   ],
+   [
+    "palm 540b",
+    "8"
+   ]
+  ]
+ },
+ {
+  "id": "cot02",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "On what kinds of tasks does chain-of-thought prompting improve performance?",
+  "evidence": [
+   "arithmetic, commonsense, and symbolic reasoning tasks"
+  ],
+  "answer": [
+   [
+    "arithmetic",
+    "commonsense",
+    "symbolic"
+   ]
+  ]
+ },
+ {
+  "id": "cot03",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "What kind of ability is chain-of-thought prompting according to the results?",
+  "evidence": [
+   "emergent ability of model scale"
+  ],
+  "answer": [
+   [
+    "emergent"
+   ]
+  ]
+ },
+ {
+  "id": "cot04",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "At roughly what model size does chain-of-thought prompting start yielding gains?",
+  "evidence": [
+   "models of ∼100B parameters"
+  ],
+  "answer": [
+   [
+    "100b"
+   ]
+  ]
+ },
+ {
+  "id": "cot05",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "Which benchmark of math word problems is mentioned in the introduction?",
+  "evidence": [
+   "GSM8K benchmark of math word problems"
+  ],
+  "answer": [
+   [
+    "gsm8k"
+   ]
+  ]
+ },
+ {
+  "id": "cot06",
+  "doc": "chain_of_thought.pdf",
+  "type": "text",
+  "q": "What did chain-of-thought prompting surpass on GSM8K?",
+  "evidence": [
+   "ﬁnetuned GPT-3 with a veriﬁer"
+  ],
+  "answer": [
+   [
+    "finetuned gpt-3"
+   ],
+   [
+    "fine-tuned gpt-3"
+   ]
+  ]
+ },
+ {
+  "id": "cot07",
+  "doc": "chain_of_thought.pdf",
+  "type": "unanswerable",
+  "q": "How many human annotators wrote the chain-of-thought exemplars and how much were they paid?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "gal01",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Dove e quando nacque Galileo Galilei?",
+  "evidence": [
+   "Pisa, 15 febbraio 1564"
+  ],
+  "answer": [
+   [
+    "pisa",
+    "15 febbraio 1564"
+   ]
+  ]
+ },
+ {
+  "id": "gal02",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Dove e quando morì Galileo Galilei?",
+  "evidence": [
+   "Arcetri, 8 gennaio 1642"
+  ],
+  "answer": [
+   [
+    "arcetri",
+    "8 gennaio 1642"
+   ]
+  ]
+ },
+ {
+  "id": "gal03",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "In quale opera pubblicata nel 1610 furono presentate le nuove scoperte astronomiche?",
+  "evidence": [
+   "nel Sidereus Nuncius"
+  ],
+  "answer": [
+   [
+    "sidereus nuncius"
+   ]
+  ]
+ },
+ {
+  "id": "gal04",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Quando fu costretto Galileo all'abiura?",
+  "evidence": [
+   "22 giugno 1633"
+  ],
+  "answer": [
+   [
+    "22 giugno 1633"
+   ]
+  ]
+ },
+ {
+  "id": "gal05",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Come denominò Galileo i satelliti di Giove?",
+  "evidence": [
+   "stelle medicee"
+  ],
+  "answer": [
+   [
+    "stelle medicee"
+   ]
+  ]
+ },
+ {
+  "id": "gal06",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Chi erano i genitori di Galileo?",
+  "evidence": [
+   "Vincenzo Galilei e di Giulia Ammannati"
+  ],
+  "answer": [
+   [
+    "vincenzo galilei",
+    "giulia ammannati"
+   ]
+  ]
+ },
+ {
+  "id": "gal07",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Quale cardinale incaricò i matematici vaticani di una relazione sulle scoperte di Galileo?",
+  "evidence": [
+   "cardinale Roberto Bellarmino"
+  ],
+  "answer": [
+   [
+    "bellarmino"
+   ]
+  ]
+ },
+ {
+  "id": "gal08",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "text",
+  "q": "Quale allievo assistette Galileo nel 1639?",
+  "evidence": [
+   "giovane allievo Vincenzo Viviani"
+  ],
+  "answer": [
+   [
+    "viviani"
+   ]
+  ]
+ },
+ {
+  "id": "gal09",
+  "doc": "wiki_it_galileo.pdf",
+  "type": "unanswerable",
+  "q": "Quanti figli legittimi ebbe Galileo con la moglie Marina Gamba?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "dan01",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Dove e quando nacque Dante Alighieri?",
+  "evidence": [
+   "Firenze, tra il 14 maggio e il 13 giugno 1265"
+  ],
+  "answer": [
+   [
+    "firenze",
+    "1265"
+   ]
+  ]
+ },
+ {
+  "id": "dan02",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Dove morì Dante e in che anno?",
+  "evidence": [
+   "Ravenna, notte tra il 13 e il 14 settembre"
+  ],
+  "answer": [
+   [
+    "ravenna",
+    "1321"
+   ]
+  ]
+ },
+ {
+  "id": "dan03",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Con chi fu concordato il matrimonio di Dante quando aveva dodici anni?",
+  "evidence": [
+   "matrimonio con Gemma Donati"
+  ],
+  "answer": [
+   [
+    "gemma donati"
+   ],
+   [
+    "gemma"
+   ]
+  ]
+ },
+ {
+  "id": "dan04",
+  "doc": "wiki_it_dante.pdf",
+  "type": "number",
+  "q": "In quale anno fu concordato il matrimonio di Dante con Gemma?",
+  "evidence": [
+   "nel 1277, fu concordato il suo matrimonio con Gemma"
+  ],
+  "answer": [
+   [
+    "1277"
+   ]
+  ]
+ },
+ {
+  "id": "dan05",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Chi guidava i giovani poeti che espressero dissenso verso la complessità stilistica?",
+  "evidence": [
+   "capeggiati dal nobile Guido Cavalcanti"
+  ],
+  "answer": [
+   [
+    "guido cavalcanti"
+   ],
+   [
+    "cavalcanti"
+   ]
+  ]
+ },
+ {
+  "id": "dan06",
+  "doc": "wiki_it_dante.pdf",
+  "type": "number",
+  "q": "In che anno Dante fu eletto uno dei sette priori?",
+  "evidence": [
+   "Nell'anno 1300, Dante fu eletto uno dei sette priori"
+  ],
+  "answer": [
+   [
+    "1300"
+   ]
+  ]
+ },
+ {
+  "id": "dan07",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Quando fu condannato Dante alla confisca delle proprietà?",
+  "evidence": [
+   "27 gennaio 1302"
+  ],
+  "answer": [
+   [
+    "27 gennaio 1302"
+   ]
+  ]
+ },
+ {
+  "id": "dan08",
+  "doc": "wiki_it_dante.pdf",
+  "type": "text",
+  "q": "Quale opera Dante stava scrivendo tra il 1308 e il 1311?",
+  "evidence": [
+   "stava scrivendo il De Monarchia"
+  ],
+  "answer": [
+   [
+    "de monarchia"
+   ],
+   [
+    "monarchia"
+   ]
+  ]
+ },
+ {
+  "id": "dan09",
+  "doc": "wiki_it_dante.pdf",
+  "type": "unanswerable",
+  "q": "Quanti versi ha in totale il Convivio secondo l'edizione critica?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "tur01",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "When and where was Alan Turing born?",
+  "evidence": [
+   "23 June 1912"
+  ],
+  "answer": [
+   [
+    "23 june 1912"
+   ]
+  ]
+ },
+ {
+  "id": "tur02",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "When did Alan Turing die?",
+  "evidence": [
+   "7 June 1954"
+  ],
+  "answer": [
+   [
+    "7 june 1954"
+   ]
+  ]
+ },
+ {
+  "id": "tur03",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "Where did Turing work during World War II?",
+  "evidence": [
+   "Government Code and Cypher School at Bletchley Park"
+  ],
+  "answer": [
+   [
+    "bletchley park"
+   ]
+  ]
+ },
+ {
+  "id": "tur04",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "From which university did Turing earn his doctorate and in which year?",
+  "evidence": [
+   "earned a doctorate from Princeton University in 1938"
+  ],
+  "answer": [
+   [
+    "princeton",
+    "1938"
+   ]
+  ]
+ },
+ {
+  "id": "tur05",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "What was the title of Turing's 36-page paper on computable numbers?",
+  "evidence": [
+   "On Computable Numbers, with an Application to the Entscheidungsproblem"
+  ],
+  "answer": [
+   [
+    "on computable numbers"
+   ]
+  ]
+ },
+ {
+  "id": "tur06",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "Which early stored-program computer did Turing design at the National Physical Laboratory?",
+  "evidence": [
+   "designed the Automatic Computing Engine"
+  ],
+  "answer": [
+   [
+    "automatic computing engine"
+   ],
+   [
+    "ace"
+   ]
+  ]
+ },
+ {
+  "id": "tur07",
+  "doc": "wiki_en_turing.pdf",
+  "type": "number",
+  "q": "In what year did Turing join Max Newman's Computing Machine Laboratory at Manchester?",
+  "evidence": [
+   "In 1948, he joined Max Newman's Computing Machine Laboratory"
+  ],
+  "answer": [
+   [
+    "1948"
+   ]
+  ]
+ },
+ {
+  "id": "tur08",
+  "doc": "wiki_en_turing.pdf",
+  "type": "text",
+  "q": "Where did Alan Turing die?",
+  "evidence": [
+   "Wilmslow, Cheshire, England"
+  ],
+  "answer": [
+   [
+    "wilmslow"
+   ]
+  ]
+ },
+ {
+  "id": "tur09",
+  "doc": "wiki_en_turing.pdf",
+  "type": "unanswerable",
+  "q": "How many chess games did Turing play against Claude Shannon?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "mar01",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "How tall is Olympus Mons?",
+  "evidence": [
+   "Olympus Mons, 21.9 km"
+  ],
+  "answer": [
+   [
+    "21.9"
+   ]
+  ]
+ },
+ {
+  "id": "mar02",
+  "doc": "wiki_en_mars.pdf",
+  "type": "text",
+  "q": "What are the two natural satellites of Mars?",
+  "evidence": [
+   "Phobos and Deimos"
+  ],
+  "answer": [
+   [
+    "phobos",
+    "deimos"
+   ]
+  ]
+ },
+ {
+  "id": "mar03",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "How long is a Martian year in Earth days?",
+  "evidence": [
+   "687 Earth days"
+  ],
+  "answer": [
+   [
+    "687"
+   ]
+  ]
+ },
+ {
+  "id": "mar04",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "How long is a Martian solar day (sol) in hours?",
+  "evidence": [
+   "sol) is equal to 24.6 hours"
+  ],
+  "answer": [
+   [
+    "24.6"
+   ]
+  ]
+ },
+ {
+  "id": "mar05",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "How long is Valles Marineris?",
+  "evidence": [
+   "Valles Marineris, 4,000 km"
+  ],
+  "answer": [
+   [
+    "4000"
+   ],
+   [
+    "4,000"
+   ]
+  ]
+ },
+ {
+  "id": "mar06",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "What is the mean diameter of Mars?",
+  "evidence": [
+   "mean diameter, 6,779 km"
+  ],
+  "answer": [
+   [
+    "6779"
+   ],
+   [
+    "6,779"
+   ]
+  ]
+ },
+ {
+  "id": "mar07",
+  "doc": "wiki_en_mars.pdf",
+  "type": "text",
+  "q": "Who discovered the moons of Mars and in which year?",
+  "evidence": [
+   "discovered in 1877 by Asaph Hall"
+  ],
+  "answer": [
+   [
+    "asaph hall",
+    "1877"
+   ]
+  ]
+ },
+ {
+  "id": "mar08",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "What is the axial tilt of Mars?",
+  "evidence": [
+   "axial tilt of 25 degrees"
+  ],
+  "answer": [
+   [
+    "25 degrees"
+   ],
+   [
+    "25°"
+   ],
+   [
+    "25"
+   ]
+  ]
+ },
+ {
+  "id": "mar09",
+  "doc": "wiki_en_mars.pdf",
+  "type": "text",
+  "q": "Which location on Mars has the lowest surface radiation?",
+  "evidence": [
+   "Hellas Planitia has the lowest surface radiation"
+  ],
+  "answer": [
+   [
+    "hellas planitia"
+   ]
+  ]
+ },
+ {
+  "id": "mar10",
+  "doc": "wiki_en_mars.pdf",
+  "type": "number",
+  "q": "What is the approximate speed of sound on Mars according to the Perseverance recordings?",
+  "evidence": [
+   "approximately 240 m/s"
+  ],
+  "answer": [
+   [
+    "240"
+   ]
+  ]
+ },
+ {
+  "id": "mar11",
+  "doc": "wiki_en_mars.pdf",
+  "type": "unanswerable",
+  "q": "How many humans have walked on the surface of Mars?",
+  "evidence": [],
+  "answer": null
+ }
+]

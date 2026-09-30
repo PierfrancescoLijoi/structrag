@@ -89,6 +89,7 @@ def create_app(services: Services) -> FastAPI:
         info = services.llm.health() if hasattr(services.llm, "health") else {"ok": True}
         return {**info, "embedder": services.settings.embedder, "chat_model": services.settings.chat_model,
                 "embed_model": services.settings.embed_model, "pii_mode": services.settings.pii_mode,
+                "rerank": services.settings.rerank, "local_embed_model": services.settings.local_embed_model,
                 "documents": len(services.store.list_documents())}
 
     @app.get("/api/stats")

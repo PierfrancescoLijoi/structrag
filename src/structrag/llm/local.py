@@ -25,8 +25,10 @@ CUSTOM_MODELS = {
 
 
 # Cross-encoders fastembed does not ship: (onnx file in the HF repo, size in GB). All Apache-2.0 / MIT.
+# name -> (HF repo, onnx file, size GB). The int8 file is the same model, 4x smaller, AVX2 kernels.
 CUSTOM_RERANKERS = {
-    "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1": ("onnx/model.onnx", 0.47),   # multilingual (incl. Italian)
+    "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1": ("cross-encoder/mmarco-mMiniLMv2-L12-H384-v1", "onnx/model.onnx", 0.47),
+    "mmarco-mMiniLMv2-int8": ("cross-encoder/mmarco-mMiniLMv2-L12-H384-v1", "onnx/model_quint8_avx2.onnx", 0.12),
 }
 
 
@@ -79,8 +81,8 @@ class LocalReranker:
         name = settings.local_rerank_model
         if name in CUSTOM_RERANKERS and name not in {m["model"] for m in TextCrossEncoder.list_supported_models()}:
             from fastembed.common.model_description import ModelSource
-            model_file, size = CUSTOM_RERANKERS[name]
-            TextCrossEncoder.add_custom_model(model=name, sources=ModelSource(hf=name), model_file=model_file,
+            repo, model_file, size = CUSTOM_RERANKERS[name]
+            TextCrossEncoder.add_custom_model(model=name, sources=ModelSource(hf=repo), model_file=model_file,
                                               size_in_gb=size)
         self.model = TextCrossEncoder(name, threads=_threads(settings))
         self.max_chars = settings.rerank_max_chars

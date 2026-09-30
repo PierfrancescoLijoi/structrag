@@ -59,3 +59,24 @@ def test_unsupported_and_fake_office_files_are_rejected(tmp_path):
         parse_file(bad)
     with pytest.raises(UnsupportedFormat):
         parse_file(tmp_path / "x.doc")
+
+
+def test_docx_ragged_table_does_not_crash(tmp_path):
+    from docx import Document
+    from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls, qn
+    from structrag.parsers import parse_file
+    from structrag.config import Settings
+
+    d = Document()
+    t = d.add_table(rows=3, cols=3)
+    for r, row in enumerate(t.rows):
+        for c, cell in enumerate(row.cells):
+            cell.text = f"r{r}c{c}"
+    row = t.rows[1]._tr
+    row.get_or_add_trPr().append(parse_xml(f'<w:gridBefore {nsdecls("w")} w:val="1"/>'))
+    row.remove(row.findall(qn("w:tc"))[0])           # a row that starts late: python-docx `row.cells` raises here
+    d.save(tmp_path / "ragged.docx")
+    doc = parse_file(tmp_path / "ragged.docx", Settings())
+    table = next(b for b in doc.blocks if b.kind == "table")
+    assert table.rows[0] == ("r0c0", "r0c1", "r0c2") and table.rows[1] == ("r1c1", "r1c2")

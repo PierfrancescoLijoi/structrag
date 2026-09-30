@@ -1,0 +1,899 @@
+[
+ {
+  "id": "bert01",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "How many parameters does BERT-BASE have?",
+  "evidence": [
+   "Total Parameters=110M"
+  ],
+  "answer": [
+   [
+    "110m"
+   ],
+   [
+    "110 million"
+   ]
+  ]
+ },
+ {
+  "id": "bert02",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "How many parameters does BERT-LARGE have?",
+  "evidence": [
+   "Total Parameters=340M"
+  ],
+  "answer": [
+   [
+    "340m"
+   ],
+   [
+    "340 million"
+   ]
+  ]
+ },
+ {
+  "id": "bert03",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "What vocabulary size does the WordPiece tokenizer used by BERT have?",
+  "evidence": [
+   "30,000 token vocabulary"
+  ],
+  "answer": [
+   [
+    "30000"
+   ],
+   [
+    "30,000"
+   ]
+  ]
+ },
+ {
+  "id": "bert04",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "What percentage of WordPiece tokens are masked in each sequence in the masked LM task?",
+  "evidence": [
+   "mask 15% of all WordPiece tokens"
+  ],
+  "answer": [
+   [
+    "15%"
+   ],
+   [
+    "15 percent"
+   ]
+  ]
+ },
+ {
+  "id": "bert05",
+  "doc": "bert.pdf",
+  "type": "text",
+  "q": "Which corpora was BERT pre-trained on?",
+  "evidence": [
+   "BooksCorpus (800M words)",
+   "English Wikipedia (2,500M words)"
+  ],
+  "answer": [
+   [
+    "bookscorpus",
+    "wikipedia"
+   ]
+  ]
+ },
+ {
+  "id": "bert06",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "With what batch size and for how many steps was BERT pre-trained?",
+  "evidence": [
+   "batch size of 256 sequences",
+   "1,000,000 steps"
+  ],
+  "answer": [
+   [
+    "256",
+    "1,000,000"
+   ],
+   [
+    "256",
+    "1000000"
+   ],
+   [
+    "256",
+    "1 million"
+   ]
+  ]
+ },
+ {
+  "id": "bert07",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "What Adam learning rate was used for BERT pre-training?",
+  "evidence": [
+   "learning rate of 1e-4"
+  ],
+  "answer": [
+   [
+    "1e-4"
+   ],
+   [
+    "0.0001"
+   ]
+  ]
+ },
+ {
+  "id": "bert08",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "What GLUE score did BERT reach?",
+  "evidence": [
+   "GLUE score to 80.5%"
+  ],
+  "answer": [
+   [
+    "80.5"
+   ]
+  ]
+ },
+ {
+  "id": "bert09",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "What Test F1 did BERT obtain on SQuAD v2.0?",
+  "evidence": [
+   "SQuAD v2.0 Test F1 to 83.1"
+  ],
+  "answer": [
+   [
+    "83.1"
+   ]
+  ]
+ },
+ {
+  "id": "bert10",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "How many layers, what hidden size and how many attention heads does BERT-LARGE have?",
+  "evidence": [
+   "L=24, H=1024, A=16"
+  ],
+  "answer": [
+   [
+    "24",
+    "1024",
+    "16"
+   ]
+  ]
+ },
+ {
+  "id": "bert11",
+  "doc": "bert.pdf",
+  "type": "number",
+  "q": "How long did each BERT pre-training run take?",
+  "evidence": [
+   "4 days"
+  ],
+  "answer": [
+   [
+    "4 days"
+   ],
+   [
+    "four days"
+   ]
+  ]
+ },
+ {
+  "id": "bert12",
+  "doc": "bert.pdf",
+  "type": "unanswerable",
+  "q": "How much did it cost in US dollars to pre-train BERT-LARGE?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "gpt01",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "How many parameters does GPT-3 have?",
+  "evidence": [
+   "175 billion parameters"
+  ],
+  "answer": [
+   [
+    "175 billion"
+   ],
+   [
+    "175b"
+   ]
+  ]
+ },
+ {
+  "id": "gpt02",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "What is the context window size of GPT-3?",
+  "evidence": [
+   "nctx = 2048"
+  ],
+  "answer": [
+   [
+    "2048"
+   ],
+   [
+    "2,048"
+   ]
+  ]
+ },
+ {
+  "id": "gpt03",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "On how many tokens in total were all GPT-3 models trained?",
+  "evidence": [
+   "300 billion tokens"
+  ],
+  "answer": [
+   [
+    "300 billion"
+   ]
+  ]
+ },
+ {
+  "id": "gpt04",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "How large is the filtered Common Crawl dataset used for GPT-3?",
+  "evidence": [
+   "570GB after"
+  ],
+  "answer": [
+   [
+    "570"
+   ]
+  ]
+ },
+ {
+  "id": "gpt05",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "What accuracy does GPT-3 achieve on TriviaQA in the few-shot setting?",
+  "evidence": [
+   "71.2% in the few-shot"
+  ],
+  "answer": [
+   [
+    "71.2"
+   ]
+  ]
+ },
+ {
+  "id": "gpt06",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "What Adam beta values were used to train GPT-3?",
+  "evidence": [
+   "β1 = 0.9, β2 = 0.95"
+  ],
+  "answer": [
+   [
+    "0.9",
+    "0.95"
+   ]
+  ]
+ },
+ {
+  "id": "gpt07",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "text",
+  "q": "Which attention patterns does GPT-3 use in its transformer layers?",
+  "evidence": [
+   "alternating dense and locally banded sparse attention patterns"
+  ],
+  "answer": [
+   [
+    "dense",
+    "sparse"
+   ],
+   [
+    "dense",
+    "banded"
+   ]
+  ]
+ },
+ {
+  "id": "gpt08",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "text",
+  "q": "On which GPUs were the GPT-3 models trained?",
+  "evidence": [
+   "V100 GPU"
+  ],
+  "answer": [
+   [
+    "v100"
+   ]
+  ]
+ },
+ {
+  "id": "gpt09",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "number",
+  "q": "What accuracy does GPT-3 reach on TriviaQA in the zero-shot setting?",
+  "evidence": [
+   "64.3% accuracy on TriviaQA in the zero-shot"
+  ],
+  "answer": [
+   [
+    "64.3"
+   ]
+  ]
+ },
+ {
+  "id": "gpt10",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "table",
+  "q": "What weight does Common Crawl have in the GPT-3 training mix?",
+  "evidence": [
+   "60% 22% 8% 8% 3%"
+  ],
+  "answer": [
+   [
+    "60%"
+   ],
+   [
+    "60 percent"
+   ]
+  ]
+ },
+ {
+  "id": "gpt11",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "table",
+  "q": "How much training compute in FLOPs did GPT-3 175B need?",
+  "evidence": [
+   "3.14E+23"
+  ],
+  "answer": [
+   [
+    "3.14e+23"
+   ],
+   [
+    "3.14e23"
+   ],
+   [
+    "3.14 x 10^23"
+   ],
+   [
+    "3.14 × 10^23"
+   ],
+   [
+    "3.14 × 10²³"
+   ]
+  ]
+ },
+ {
+  "id": "gpt12",
+  "doc": "gpt3_fewshot.pdf",
+  "type": "unanswerable",
+  "q": "What was the electricity bill in euros for training GPT-3?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "py01",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "Who created the Python programming language?",
+  "evidence": [
+   "Guido van Rossum began working on Python in the late 1980s"
+  ],
+  "answer": [
+   [
+    "guido van rossum"
+   ]
+  ]
+ },
+ {
+  "id": "py02",
+  "doc": "wiki_en_python.pdf",
+  "type": "number",
+  "q": "In which year and as which version was Python first released?",
+  "evidence": [
+   "first released it in 1991 as Python 0.9.0"
+  ],
+  "answer": [
+   [
+    "1991",
+    "0.9.0"
+   ]
+  ]
+ },
+ {
+  "id": "py03",
+  "doc": "wiki_en_python.pdf",
+  "type": "number",
+  "q": "When was Python 3.0 released?",
+  "evidence": [
+   "Python 3.0, released in 2008"
+  ],
+  "answer": [
+   [
+    "2008"
+   ]
+  ]
+ },
+ {
+  "id": "py04",
+  "doc": "wiki_en_python.pdf",
+  "type": "number",
+  "q": "On what date was Python 2.0 released?",
+  "evidence": [
+   "Python 2.0 was released on 16 October 2000"
+  ],
+  "answer": [
+   [
+    "16 october 2000"
+   ]
+  ]
+ },
+ {
+  "id": "py05",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "Who wrote the Zen of Python?",
+  "evidence": [
+   "Zen of Python (PEP 20) written by Tim Peters"
+  ],
+  "answer": [
+   [
+    "tim peters"
+   ]
+  ]
+ },
+ {
+  "id": "py06",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "What title was Guido van Rossum given for leading Python?",
+  "evidence": [
+   "benevolent dictator for life"
+  ],
+  "answer": [
+   [
+    "benevolent dictator for life"
+   ],
+   [
+    "bdfl"
+   ]
+  ]
+ },
+ {
+  "id": "py07",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "Where does the name Python come from?",
+  "evidence": [
+   "Monty Python's Flying Circus"
+  ],
+  "answer": [
+   [
+    "monty python"
+   ]
+  ]
+ },
+ {
+  "id": "py08",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "Which document covers Python coding style?",
+  "evidence": [
+   "Python coding style is covered in PEP 8"
+  ],
+  "answer": [
+   [
+    "pep 8"
+   ]
+  ]
+ },
+ {
+  "id": "py09",
+  "doc": "wiki_en_python.pdf",
+  "type": "text",
+  "q": "What limits typical Python implementations from scaling across cores?",
+  "evidence": [
+   "limited by the global interpreter lock"
+  ],
+  "answer": [
+   [
+    "global interpreter lock"
+   ],
+   [
+    "gil"
+   ]
+  ]
+ },
+ {
+  "id": "py10",
+  "doc": "wiki_en_python.pdf",
+  "type": "number",
+  "q": "On what date did Guido van Rossum announce he was stepping down as BDFL?",
+  "evidence": [
+   "12 July 2018"
+  ],
+  "answer": [
+   [
+    "12 july 2018"
+   ]
+  ]
+ },
+ {
+  "id": "py11",
+  "doc": "wiki_en_python.pdf",
+  "type": "unanswerable",
+  "q": "What is Python's market share percentage among Fortune 500 companies?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "ph01",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "Who discovered photosynthesis in 1779 by showing plants need light?",
+  "evidence": [
+   "discovered in 1779 by Jan Ingenhousz"
+  ],
+  "answer": [
+   [
+    "ingenhousz"
+   ]
+  ]
+ },
+ {
+  "id": "ph02",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "number",
+  "q": "What is the average rate of energy captured by global photosynthesis?",
+  "evidence": [
+   "approximately 130 terawatts"
+  ],
+  "answer": [
+   [
+    "130"
+   ]
+  ]
+ },
+ {
+  "id": "ph03",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "Which enzyme captures CO2 from the atmosphere in the Calvin cycle?",
+  "evidence": [
+   "RuBisCO captures CO2"
+  ],
+  "answer": [
+   [
+    "rubisco"
+   ]
+  ]
+ },
+ {
+  "id": "ph04",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "Who first proposed the general equation for photosynthesis?",
+  "evidence": [
+   "Cornelis van Niel"
+  ],
+  "answer": [
+   [
+    "van niel"
+   ]
+  ]
+ },
+ {
+  "id": "ph05",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "What does CAM stand for in photosynthesis?",
+  "evidence": [
+   "Crassulacean acid metabolism (CAM)"
+  ],
+  "answer": [
+   [
+    "crassulacean acid metabolism"
+   ]
+  ]
+ },
+ {
+  "id": "ph06",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "Who began the research on photosynthesis in the mid-17th century by measuring the mass of soil and a plant?",
+  "evidence": [
+   "Jan van Helmont began"
+  ],
+  "answer": [
+   [
+    "van helmont"
+   ]
+  ]
+ },
+ {
+  "id": "ph07",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "How does the power captured by photosynthesis compare with human power consumption?",
+  "evidence": [
+   "about eight times the total power consumption"
+  ],
+  "answer": [
+   [
+    "eight times"
+   ],
+   [
+    "8 times"
+   ]
+  ]
+ },
+ {
+  "id": "ph08",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "text",
+  "q": "Which pigment absorbs a photon in the light-dependent reactions?",
+  "evidence": [
+   "pigment chlorophyll"
+  ],
+  "answer": [
+   [
+    "chlorophyll"
+   ]
+  ]
+ },
+ {
+  "id": "ph09",
+  "doc": "wiki_en_photosynthesis.pdf",
+  "type": "unanswerable",
+  "q": "How many chloroplasts are there in a human leaf cell on average?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "fib01",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "number",
+  "q": "In che anno Fibonacci pubblicò il Liber abbaci?",
+  "evidence": [
+   "Nel 1202"
+  ],
+  "answer": [
+   [
+    "1202"
+   ]
+  ]
+ },
+ {
+  "id": "fib02",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "text",
+  "q": "Di quale città era il matematico Leonardo Fibonacci?",
+  "evidence": [
+   "matematico pisano Leonardo Fibonacci"
+  ],
+  "answer": [
+   [
+    "pisa"
+   ],
+   [
+    "pisano"
+   ]
+  ]
+ },
+ {
+  "id": "fib03",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "text",
+  "q": "A quale numero tende il rapporto tra numeri di Fibonacci successivi?",
+  "evidence": [
+   "sezione aurea"
+  ],
+  "answer": [
+   [
+    "sezione aurea"
+   ],
+   [
+    "numero di fidia"
+   ]
+  ]
+ },
+ {
+  "id": "fib04",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "number",
+  "q": "Chi dimostrò la formula di Binet e in quale anno?",
+  "evidence": [
+   "Jacques Binet la dimostrò nel 1843"
+  ],
+  "answer": [
+   [
+    "1843"
+   ]
+  ]
+ },
+ {
+  "id": "fib05",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "text",
+  "q": "Quale problema aritmetico riguardava la crescita di una popolazione nel Liber abbaci?",
+  "evidence": [
+   "popolazione di conigli"
+  ],
+  "answer": [
+   [
+    "conigli"
+   ]
+  ]
+ },
+ {
+  "id": "fib06",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "text",
+  "q": "Da chi è stato citato per la prima volta il teorema sui divisori primitivi?",
+  "evidence": [
+   "citato per la prima volta da Édouard Lucas"
+  ],
+  "answer": [
+   [
+    "lucas"
+   ]
+  ]
+ },
+ {
+  "id": "fib07",
+  "doc": "wiki_it_fibonacci.pdf",
+  "type": "unanswerable",
+  "q": "Quanto è stato venduto all'asta il manoscritto originale del Liber abbaci?",
+  "evidence": [],
+  "answer": null
+ },
+ {
+  "id": "leo01",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "Dove e quando nacque Leonardo da Vinci?",
+  "evidence": [
+   "Anchiano, 15 aprile 1452"
+  ],
+  "answer": [
+   [
+    "anchiano",
+    "15 aprile 1452"
+   ]
+  ]
+ },
+ {
+  "id": "leo02",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "Dove e quando morì Leonardo da Vinci?",
+  "evidence": [
+   "Amboise, 2 maggio 1519"
+  ],
+  "answer": [
+   [
+    "amboise",
+    "2 maggio 1519"
+   ]
+  ]
+ },
+ {
+  "id": "leo03",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "Presso quale maestro fu messo a bottega Leonardo?",
+  "evidence": [
+   "Andrea del Verrocchio"
+  ],
+  "answer": [
+   [
+    "verrocchio"
+   ]
+  ]
+ },
+ {
+  "id": "leo04",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "Per quale convento Leonardo ricevette nel 1494 la commissione dell'Ultima Cena?",
+  "evidence": [
+   "Santa Maria delle Grazie"
+  ],
+  "answer": [
+   [
+    "santa maria delle grazie"
+   ]
+  ]
+ },
+ {
+  "id": "leo05",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "number",
+  "q": "In quali anni fu realizzata l'Ultima Cena?",
+  "evidence": [
+   "L'Ultima Cena (1494-1498)"
+  ],
+  "answer": [
+   [
+    "1494",
+    "1498"
+   ]
+  ]
+ },
+ {
+  "id": "leo06",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "A quale duca Leonardo portò un omaggio da Firenze?",
+  "evidence": [
+   "duca Ludovico il Moro"
+  ],
+  "answer": [
+   [
+    "ludovico il moro"
+   ]
+  ]
+ },
+ {
+  "id": "leo07",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "text",
+  "q": "Quale re di Francia conobbe Leonardo a Bologna?",
+  "evidence": [
+   "Francesco I di Francia"
+  ],
+  "answer": [
+   [
+    "francesco i"
+   ]
+  ]
+ },
+ {
+  "id": "leo08",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "number",
+  "q": "A che anno risale la Dama con l'ermellino?",
+  "evidence": [
+   "Dama con l'ermellino (1485)"
+  ],
+  "answer": [
+   [
+    "1485"
+   ]
+  ]
+ },
+ {
+  "id": "leo09",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "number",
+  "q": "Quali anni comprende il periodo fiorentino di Leonardo?",
+  "evidence": [
+   "Firenze (1468-1482)"
+  ],
+  "answer": [
+   [
+    "1468",
+    "1482"
+   ]
+  ]
+ },
+ {
+  "id": "leo10",
+  "doc": "wiki_it_leonardo.pdf",
+  "type": "unanswerable",
+  "q": "Quanto pagò Leonardo di tasse nel 1503 in fiorini?",
+  "evidence": [],
+  "answer": null
+ }
+]

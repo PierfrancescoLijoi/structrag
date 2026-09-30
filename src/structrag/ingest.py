@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import threading
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -107,6 +108,7 @@ class Ingestor:
                  llm: ChatModel | None = None):
         self.s, self.store, self.embedder, self.llm = settings, store, embedder, llm
         self.embed_id, self.index_sig = embedder_id(settings), index_signature(settings)
+        self._lock = threading.RLock()   # upload worker, watcher and API calls must not ingest concurrently
         self.profiles = ProfileStore(settings.profiles_dir)
         self.overrides = OverrideStore(settings.profiles_dir)
         self.pii_detector: Detector | None = load_detector(settings) if settings.pii_mode == "mask" else None
@@ -118,6 +120,10 @@ class Ingestor:
         return np.vstack([reuse[t] if t in reuse else fresh[t] for t in texts]) if texts else np.zeros((0, 1))
 
     def ingest_file(self, path: Path, reuse: dict | None = None) -> IngestResult:
+        with self._lock:
+            return self._ingest_file(path, reuse)
+
+    def _ingest_file(self, path: Path, reuse: dict | None) -> IngestResult:
         sha = file_sha256(path)
         if (existing := self.store.find_by_hash(sha)):
             return IngestResult("duplicate", existing["id"])
@@ -221,6 +227,10 @@ class Ingestor:
                             len(decisions), queued, doc.warnings, pii=pii)
 
     def reingest(self, doc_id: int) -> IngestResult:
+        with self._lock:
+            return self._reingest(doc_id)
+
+    def _reingest(self, doc_id: int) -> IngestResult:
         """Rebuild a document from its stored file (file edited, index stale, or human correction).
 
         An edited file is stored as a new version first and the old one removed only on success, so a

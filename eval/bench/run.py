@@ -73,10 +73,10 @@ class _NoLLM:
     stream = choose = chat
 
 
-def ingest_all(services) -> dict:
+def ingest_all(services, docs: Path) -> dict:
     stats = {}
     have = {Path(d["path"]).name for d in services.store.list_documents()}
-    for f in sorted(DOCS.iterdir()):
+    for f in sorted(docs.iterdir()):
         if f.name in have:
             continue
         t = time.time()
@@ -94,8 +94,8 @@ def evidence_exists(services, qa: dict) -> bool:
 
 def run(args) -> dict:
     services = build(args)
-    ingest_all(services)
-    qas = json.loads((HERE / "qa.json").read_text(encoding="utf-8"))
+    ingest_all(services, HERE / args.docs)
+    qas = json.loads((HERE / args.qa).read_text(encoding="utf-8"))
     if args.only:
         qas = [q for q in qas if re.search(args.only, q["id"])]
     ks = [int(k) for k in args.k.split(",")]
@@ -178,6 +178,8 @@ def report(rows, ks, missing, args) -> None:
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--tag", default="hash")
+    p.add_argument("--docs", default="docs")
+    p.add_argument("--qa", default="qa.json")
     p.add_argument("--embedder", default="hash")
     p.add_argument("--cache", default=None, help="reuse the index built under another tag")
     p.add_argument("--rr-chars", type=int, default=1200)

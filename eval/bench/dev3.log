@@ -1,0 +1,20 @@
+C:\Users\pf23l\PycharmProjects\structrag\.venv\Lib\site-packages\huggingface_hub\utils\tqdm.py:176: UserWarning: Cannot enable progress bars: environment variable `HF_HUB_DISABLE_PROGRESS_BARS=1` is set and has priority.
+  warnings.warn(
+
+== dev3: 80 questions, 73 with evidence ==
+hit@1  chunk:  86.3%   doc: 100.0%
+hit@3  chunk:  95.9%   doc: 100.0%
+hit@5  chunk:  97.3%   doc: 100.0%
+hit@8  chunk:  98.6%   doc: 100.0%
+context hit (as shown to LLM):  98.6%
+retrieval latency: median 2638 ms, p95 5433 ms
+  number       n= 39 hit@5 100.0%
+  table        n=  7 hit@5 100.0%
+  text         n= 27 hit@5  92.6%
+ANSWER ACCURACY: 77/80 = 96.2%
+  number       n= 39 acc  97.4%
+  table        n=  7 acc  85.7%
+  text         n= 27 acc  96.3%
+  unanswerable n=  7 acc 100.0%
+retrieval misses @5: ['rag04', 'rag08']
+wrong answers: ['att10', 'ppt05', 'rom03']

@@ -55,15 +55,16 @@ def _paragraph_block(par: Paragraph) -> Block | None:
     return Block(text, kind, level_hint=hint, style=name, size=_style_size(par), bold=_is_bold(par))
 
 
+def _cell_text(tc) -> str:
+    return " ".join("".join(t.text or "" for t in p.iter(qn("w:t"))) for p in tc.findall(qn("w:p")))
+
+
 def _table_block(table: Table) -> Block | None:
     rows: list[tuple[str, ...]] = []
-    for row in table.rows:
-        cells, seen = [], set()
-        for cell in row.cells:  # merged cells repeat the same _tc: keep the first only
-            if id(cell._tc) in seen:
-                continue
-            seen.add(id(cell._tc))
-            cells.append(" ".join(cell.text.split()))
+    # Walk the XML rows/cells directly: `row.cells` raises on ragged tables (gridBefore/gridAfter, missing
+    # cells), which real-world documents are full of. Merged cells are single <w:tc> elements here.
+    for tr in table._tbl.findall(qn("w:tr")):
+        cells = [" ".join(_cell_text(tc).split()) for tc in tr.findall(qn("w:tc"))]
         if any(cells):
             rows.append(tuple(cells))
     if not rows:

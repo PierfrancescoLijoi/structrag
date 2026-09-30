@@ -58,10 +58,11 @@
   <h3>Chats</h3><div id="sessions" class="list" style="max-height:28%"></div>
   <h3>Documents <span class="dim" id="scope"></span></h3><div id="docs" class="list" style="flex:1"></div>
   <div style="padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px">
+    <button id="syncbtn" title="Detect new, edited, renamed and deleted files in the inbox">Sync inbox</button>
     <button id="overviewbtn">Overview</button><button id="reviewbtn">Review queue (0)</button></div>
 </aside>
 <main>
-  <header><b>structrag</b><span id="status">connecting...</span><span class="sp"></span><span class="dim" id="piistate"></span><span class="dim">100% local</span></header>
+  <header><b>structrag</b><span id="status">connecting...</span><span class="sp"></span><span class="dim" id="models"></span><span class="dim" id="piistate"></span><span class="dim">100% local</span></header>
   <div id="msgs"></div>
   <div id="overview"></div>
   <div id="review"></div>
@@ -110,6 +111,7 @@ async function refresh() {
   $('status').textContent = health.ok ? `models: ${health.chat_ready ? 'chat ok' : 'chat missing'}, ${health.embed_ready || health.embedder === 'hash' ? 'embed ok' : 'embed missing'}` : 'model server offline (start Ollama)';
   $('reviewbtn').textContent = `Review queue (${review.length})`;
   if ($('overview').style.display === 'block') loadOverview();
+  $('models').textContent = `${health.embedder === 'local' ? 'local embeddings' : health.embedder}${health.rerank === 'local' ? ' + reranker' : ''}`;
   $('piistate').textContent = `PII: ${health.pii_mode === 'mask' ? 'masking on' : 'off'}`;
   $('scope').textContent = selected.size ? `(${selected.size} selected)` : '(all)';
   $('docs').replaceChildren(...docs.map((d) => {
@@ -177,6 +179,18 @@ $('drop').onclick = () => $('file').click(); $('file').onchange = (e) => upload(
 $('drop').ondragover = (e) => { e.preventDefault(); $('drop').classList.add('over'); };
 $('drop').ondragleave = () => $('drop').classList.remove('over');
 $('drop').ondrop = (e) => { e.preventDefault(); $('drop').classList.remove('over'); upload(e.dataTransfer.files); };
+
+$('syncbtn').onclick = async () => {
+  const b = $('syncbtn'); b.disabled = true; b.textContent = 'Syncing...';
+  try {
+    const r = await (await api('/api/inbox/scan', { method: 'POST' })).json();
+    const parts = ['added', 'updated', 'renamed', 'removed', 'rebuilt'].filter((k) => r[k].length).map((k) => `${r[k].length} ${k}`);
+    const failed = Object.keys(r.failed).length;
+    $('status').textContent = (parts.length || failed ? [...parts, ...(failed ? [`${failed} failed`] : [])].join(', ') : 'inbox already up to date');
+    if (failed) $('status').title = Object.entries(r.failed).map(([n, e]) => `${n}: ${e}`).join(' | ');
+  } catch (e) { $('status').textContent = 'Sync failed: ' + e.message; }
+  b.disabled = false; b.textContent = 'Sync inbox'; await refresh();
+};
 
 function bars(title, counts) {
   const box = el('div', 'card'); box.append(el('div', 'dim', title));
