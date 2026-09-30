@@ -1,0 +1,230 @@
+"""SQLite persistence: documents, sections, chunks (+FTS5), embeddings, review queue, chat memory.
+
+Vectors are float32 blobs searched by brute-force numpy dot products over cached matrices.
+# ponytail: brute force is fine up to ~200k chunks; swap in sqlite-vec/LanceDB beyond that.
+"""
+from __future__ import annotations
+
+import json
+import sqlite3
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+
+from .textutil import terms
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS documents(
+  id INTEGER PRIMARY KEY, path TEXT, sha256 TEXT UNIQUE, format TEXT, title TEXT, summary TEXT,
+  emb BLOB, n_sections INTEGER, n_chunks INTEGER, words INTEGER, strategy TEXT,
+  confidence REAL, status TEXT, warnings TEXT, ingested_at REAL);
+CREATE TABLE IF NOT EXISTS sections(
+  id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+  ordinal INTEGER, level INTEGER, title TEXT, path TEXT, summary TEXT, emb BLOB);
+CREATE TABLE IF NOT EXISTS chunks(
+  id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+  section_id INTEGER REFERENCES sections(id) ON DELETE CASCADE, ordinal INTEGER,
+  text TEXT, ctx TEXT, kind TEXT, loc TEXT, emb BLOB);
+CREATE INDEX IF NOT EXISTS chunks_doc ON chunks(doc_id);
+CREATE INDEX IF NOT EXISTS chunks_section ON chunks(section_id);
+CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(ctx, tokenize='unicode61 remove_diacritics 2');
+CREATE TABLE IF NOT EXISTS review_queue(
+  id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+  kind TEXT, block_idx INTEGER, text TEXT, state TEXT, options TEXT, probs TEXT,
+  style_key TEXT, level INTEGER, body_key TEXT, format TEXT, resolved INTEGER DEFAULT 0, created REAL);
+CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY, title TEXT, summary TEXT, created REAL);
+CREATE TABLE IF NOT EXISTS messages(
+  id INTEGER PRIMARY KEY, session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+  role TEXT, content TEXT, sources TEXT, created REAL);
+"""
+
+
+def _blob(vec: np.ndarray) -> bytes:
+    return np.asarray(vec, dtype=np.float32).tobytes()
+
+
+def _vec(blob: bytes) -> np.ndarray:
+    return np.frombuffer(blob, dtype=np.float32)
+
+
+@dataclass(frozen=True)
+class Matrix:
+    ids: list[int]
+    vectors: np.ndarray   # (n, d), unit-normalised
+
+
+class Store:
+    def __init__(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.path = path
+        self._local = threading.local()
+        self._version = 0
+        self._cache: dict[tuple, tuple[int, Matrix]] = {}
+        self._lock = threading.RLock()
+        with self.conn:
+            self.conn.executescript(SCHEMA)
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        if not hasattr(self._local, "conn"):
+            c = sqlite3.connect(self.path)
+            c.row_factory = sqlite3.Row
+            c.execute("PRAGMA journal_mode=WAL")
+            c.execute("PRAGMA foreign_keys=ON")
+            self._local.conn = c
+        return self._local.conn
+
+    # ---- documents -------------------------------------------------------------------------
+    def find_by_hash(self, sha: str) -> sqlite3.Row | None:
+        return self.conn.execute("SELECT * FROM documents WHERE sha256=?", (sha,)).fetchone()
+
+    def save_document(self, meta: dict, doc_emb: np.ndarray | None, sections: list[dict]) -> int:
+        """sections: dicts with section fields + 'emb' + 'chunks': [dict(text, ctx, kind, loc, emb)]."""
+        with self._lock, self.conn as c:
+            cur = c.execute(
+                "INSERT INTO documents(path,sha256,format,title,summary,emb,n_sections,n_chunks,words,"
+                "strategy,confidence,status,warnings,ingested_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (meta["path"], meta["sha256"], meta["format"], meta["title"], meta["summary"],
+                 _blob(doc_emb) if doc_emb is not None else None, len(sections),
+                 sum(len(s["chunks"]) for s in sections), meta["words"], meta["strategy"],
+                 meta["confidence"], meta["status"], json.dumps(meta.get("warnings", [])), time.time()))
+            doc_id = cur.lastrowid
+            for ordinal, s in enumerate(sections):
+                sc = c.execute(
+                    "INSERT INTO sections(doc_id,ordinal,level,title,path,summary,emb) VALUES(?,?,?,?,?,?,?)",
+                    (doc_id, ordinal, s["level"], s["title"], s["path"], s["summary"], _blob(s["emb"])))
+                for k, ch in enumerate(s["chunks"]):
+                    cc = c.execute(
+                        "INSERT INTO chunks(doc_id,section_id,ordinal,text,ctx,kind,loc,emb) VALUES(?,?,?,?,?,?,?,?)",
+                        (doc_id, sc.lastrowid, k, ch["text"], ch["ctx"], ch["kind"], ch["loc"], _blob(ch["emb"])))
+                    c.execute("INSERT INTO chunk_fts(rowid,ctx) VALUES(?,?)", (cc.lastrowid, ch["ctx"]))
+            self._version += 1
+        return doc_id
+
+    def delete_document(self, doc_id: int) -> None:
+        with self._lock, self.conn as c:
+            c.execute("DELETE FROM chunk_fts WHERE rowid IN (SELECT id FROM chunks WHERE doc_id=?)", (doc_id,))
+            c.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+            self._version += 1
+
+    def list_documents(self) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT id,path,format,title,n_sections,n_chunks,words,strategy,confidence,status,warnings,"
+            "ingested_at FROM documents ORDER BY ingested_at DESC").fetchall()
+        return [dict(r) | {"warnings": json.loads(r["warnings"] or "[]")} for r in rows]
+
+    def outline(self, doc_id: int) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT id,level,title,summary FROM sections WHERE doc_id=? ORDER BY ordinal", (doc_id,))
+        return [dict(r) for r in rows]
+
+    # ---- vectors + lexical search ---------------------------------------------------------
+    def matrix(self, table: str, doc_ids: tuple[int, ...] | None = None) -> Matrix:
+        key = (table, doc_ids)
+        cached = self._cache.get(key)
+        if cached and cached[0] == self._version:
+            return cached[1]
+        where, args = "", ()
+        if doc_ids is not None:
+            where = f"WHERE {'id' if table == 'documents' else 'doc_id'} IN ({','.join('?' * len(doc_ids))})"
+            args = doc_ids
+        rows = self.conn.execute(f"SELECT id, emb FROM {table} {where}", args).fetchall()
+        rows = [r for r in rows if r["emb"]]
+        m = Matrix([r["id"] for r in rows],
+                   np.vstack([_vec(r["emb"]) for r in rows]) if rows else np.zeros((0, 1), np.float32))
+        self._cache[key] = (self._version, m)
+        return m
+
+    def fts(self, query: str, doc_ids: list[int] | None, limit: int) -> list[int]:
+        words = terms(query)
+        if not words:
+            return []
+        match = " OR ".join(f'"{t}"' for t in dict.fromkeys(words))
+        sql = ("SELECT f.rowid FROM chunk_fts f JOIN chunks c ON c.id=f.rowid "
+               "WHERE chunk_fts MATCH ?")
+        args: list = [match]
+        if doc_ids is not None:
+            sql += f" AND c.doc_id IN ({','.join('?' * len(doc_ids))})"
+            args += doc_ids
+        sql += " ORDER BY bm25(chunk_fts) LIMIT ?"
+        return [r[0] for r in self.conn.execute(sql, [*args, limit])]
+
+    def chunks_by_ids(self, ids: list[int]) -> dict[int, dict]:
+        if not ids:
+            return {}
+        q = ("SELECT c.id,c.doc_id,c.section_id,c.text,c.kind,c.loc,d.title AS doc_title,"
+             "s.title AS section_title,s.path AS section_path FROM chunks c "
+             "JOIN documents d ON d.id=c.doc_id JOIN sections s ON s.id=c.section_id "
+             f"WHERE c.id IN ({','.join('?' * len(ids))})")
+        return {r["id"]: dict(r) for r in self.conn.execute(q, ids)}
+
+    def section_chunk_ids(self, section_ids: list[int]) -> dict[int, list[int]]:
+        out: dict[int, list[int]] = {}
+        q = f"SELECT id, section_id FROM chunks WHERE section_id IN ({','.join('?' * len(section_ids))})"
+        for r in self.conn.execute(q, section_ids) if section_ids else []:
+            out.setdefault(r["section_id"], []).append(r["id"])
+        return out
+
+    def section_text(self, section_id: int) -> str:
+        rows = self.conn.execute("SELECT text FROM chunks WHERE section_id=? ORDER BY ordinal", (section_id,))
+        return "\n".join(r[0] for r in rows)
+
+    # ---- review queue ----------------------------------------------------------------------
+    def queue_review(self, doc_id: int, item: dict) -> None:
+        with self._lock, self.conn as c:
+            c.execute(
+                "INSERT INTO review_queue(doc_id,kind,block_idx,text,state,options,probs,style_key,level,"
+                "body_key,format,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                (doc_id, item["kind"], item["idx"], item["text"], item.get("state", ""),
+                 json.dumps(item.get("options") or {}), json.dumps(item["probs"]), item.get("style_key", ""),
+                 item.get("level", 0), item.get("body_key", ""), item.get("format", ""), time.time()))
+
+    def pending_reviews(self) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT r.*, d.title AS doc_title FROM review_queue r JOIN documents d ON d.id=r.doc_id "
+            "WHERE resolved=0 ORDER BY r.id").fetchall()
+        return [dict(r) | {"options": json.loads(r["options"]), "probs": json.loads(r["probs"])} for r in rows]
+
+    def get_review(self, review_id: int) -> dict | None:
+        r = self.conn.execute("SELECT * FROM review_queue WHERE id=?", (review_id,)).fetchone()
+        return dict(r) if r else None
+
+    def resolve_review(self, review_id: int) -> None:
+        with self._lock, self.conn as c:
+            c.execute("UPDATE review_queue SET resolved=1 WHERE id=?", (review_id,))
+
+    # ---- chat memory -----------------------------------------------------------------------
+    def create_session(self, title: str = "New chat") -> int:
+        with self._lock, self.conn as c:
+            return c.execute("INSERT INTO sessions(title,summary,created) VALUES(?,?,?)",
+                             (title, "", time.time())).lastrowid
+
+    def list_sessions(self) -> list[dict]:
+        return [dict(r) for r in self.conn.execute("SELECT id,title,created FROM sessions ORDER BY id DESC")]
+
+    def get_session(self, session_id: int) -> dict | None:
+        r = self.conn.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone()
+        return dict(r) if r else None
+
+    def set_session(self, session_id: int, **fields: str) -> None:
+        allowed = {k: v for k, v in fields.items() if k in ("title", "summary")}
+        with self._lock, self.conn as c:
+            for k, v in allowed.items():
+                c.execute(f"UPDATE sessions SET {k}=? WHERE id=?", (v, session_id))
+
+    def delete_session(self, session_id: int) -> None:
+        with self._lock, self.conn as c:
+            c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+
+    def add_message(self, session_id: int, role: str, content: str, sources: list[dict] | None = None) -> None:
+        with self._lock, self.conn as c:
+            c.execute("INSERT INTO messages(session_id,role,content,sources,created) VALUES(?,?,?,?,?)",
+                      (session_id, role, content, json.dumps(sources or []), time.time()))
+
+    def messages(self, session_id: int) -> list[dict]:
+        rows = self.conn.execute("SELECT role,content,sources FROM messages WHERE session_id=? ORDER BY id",
+                                 (session_id,))
+        return [dict(r) | {"sources": json.loads(r["sources"])} for r in rows]
