@@ -37,6 +37,11 @@ class _Line:
     box: int
 
 
+def _is_stamp(text: str) -> bool:
+    """Vertical margin stamps (arXiv id, side watermarks) come out as one character per line."""
+    return all(len(tok) == 1 for tok in text.split())
+
+
 def _norm(text: str) -> str:
     return re.sub(r"\d+", "#", re.sub(r"\s+", " ", text.strip().lower()))
 
@@ -63,7 +68,7 @@ def _extract_lines(path: Path) -> tuple[list[_Line], int, int]:
                 continue
             box_id += 1
             for line in el:
-                if not isinstance(line, LTTextLine) or not line.get_text().strip():
+                if not isinstance(line, LTTextLine) or not line.get_text().strip() or _is_stamp(line.get_text()):
                     continue
                 size, bold = _line_features(line)
                 lines.append(_Line(line.get_text().strip(), size, bold, line.y0, line.y1,

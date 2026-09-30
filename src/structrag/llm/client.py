@@ -127,4 +127,9 @@ class LLM:
 
 
 def get_embedder(settings: Settings, llm: LLM | None = None) -> Embedder:
-    return HashEmbedder() if settings.embedder == "hash" else (llm or LLM(settings))
+    if settings.embedder == "hash":
+        return HashEmbedder()
+    if settings.embedder == "local":
+        from .local import LocalEmbedder
+        return LocalEmbedder(settings)
+    return llm or LLM(settings)

@@ -40,6 +40,43 @@ def _is_number(text: str) -> bool:
         return False
 
 
+HEADER_BLOCK_MAX_ROWS = 3   # an earlier region this short, above the data, is treated as its header
+DATA_ROW_NUMERIC_SHARE = 0.5
+
+
+def _cols(loc: str) -> str:
+    """Column span of a cell range like 'Sheet!A9:D18' -> 'A:D'."""
+    rng = loc.rsplit("!", 1)[-1]
+    a, _, b = rng.partition(":")
+    strip = lambda ref: "".join(ch for ch in ref if ch.isalpha())
+    return f"{strip(a)}:{strip(b or a)}"
+
+
+def _looks_headerless(rows: tuple[tuple[str, ...], ...]) -> bool:
+    filled = [c for c in rows[0] if c]
+    return len(rows) > 1 and len(filled) > 1 and sum(_is_number(c) for c in filled[1:]) / (len(filled) - 1) >= DATA_ROW_NUMERIC_SHARE
+
+
+def _borrow_headers(blocks: list[Block]) -> list[Block]:
+    """Report-style sheets put the header in a small region and the data in the one below it.
+    Without the header the data rows are unanswerable ("what were the Sales?"), so join them."""
+    out: list[Block] = []
+    last_by_cols: dict[str, Block] = {}
+    for b in blocks:
+        if b.kind == TABLE and b.rows:
+            key = _cols(b.loc)
+            prev = last_by_cols.get(key)
+            if prev is not None and len(prev.rows) <= HEADER_BLOCK_MAX_ROWS and _looks_headerless(b.rows):
+                width = len(b.rows[0])
+                names = [" / ".join(dict.fromkeys(r[i] for r in prev.rows if i < len(r) and r[i]))
+                         or f"col{i + 1}" for i in range(width)]
+                b = Block(b.text, b.kind, b.level_hint, b.style, b.size, b.bold, b.loc, b.rows,
+                          {**b.meta, "header_row": -1, "column_names": names, "header_ambiguous": False})
+            last_by_cols[key] = b if b.meta.get("header_row", 0) >= 0 else prev
+        out.append(b)
+    return out
+
+
 def _spans(flags: list[bool]) -> list[tuple[int, int]]:
     """Maximal runs of True in flags as inclusive (start, end)."""
     spans, start = [], None
@@ -135,7 +172,7 @@ def parse(path: Path, settings: Settings | None = None) -> ParsedDoc:
         bold_map = {r for r, row in enumerate(grid)
                     if any(ws.cell(r + 1, c + 1).font.bold for c, v in enumerate(row) if v)}
         blocks.append(Block(ws.title, level_hint=1, style="sheet-name", loc=ws.title))
-        for region in _regions(grid):
-            blocks.extend(_region_blocks(ws, grid, region, bold_map, ws.title))
+        sheet_blocks = [b for region in _regions(grid) for b in _region_blocks(ws, grid, region, bold_map, ws.title)]
+        blocks.extend(_borrow_headers(sheet_blocks))
     title = wb.properties.title or path.stem
     return ParsedDoc(title=title, format="xlsx", blocks=tuple(blocks), warnings=tuple(warnings))

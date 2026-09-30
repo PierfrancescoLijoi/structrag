@@ -78,6 +78,13 @@ class OverrideStore:
                 pass
         return {"headings": {}, "headers": {}}
 
+    def copy(self, old_sha: str, new_sha: str) -> None:
+        """Carry corrections over to an edited version of the same file (exact-text keys still apply)."""
+        data = self.get(old_sha)
+        if old_sha != new_sha and (data["headings"] or data["headers"]):
+            self.dir.mkdir(parents=True, exist_ok=True)
+            self._path(new_sha).write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
     def set(self, sha: str, section: str, key: str, value: int) -> None:
         data = self.get(sha)
         data[section][key] = value

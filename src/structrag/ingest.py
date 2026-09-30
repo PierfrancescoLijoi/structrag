@@ -6,6 +6,8 @@ import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+import numpy as np
+
 from .chunking import chunk_section
 from .config import Settings
 from .ir import TABLE, ParsedDoc
@@ -84,15 +86,38 @@ def _mask_section(section: dict, masker: PiiMasker) -> dict:
             "card": f"{path}\n{summary}"}
 
 
+INDEX_VERSION = 1   # bump when parsing/chunking logic changes: sync then rebuilds stale documents
+
+
+def embedder_id(settings: Settings) -> str:
+    """Vectors from different models are incompatible: this id decides when embeddings can be reused."""
+    return {"hash": "hash", "local": f"local:{settings.local_embed_model}"}.get(
+        settings.embedder, f"server:{settings.embed_model}")
+
+
+def index_signature(settings: Settings) -> str:
+    """Everything besides file content that shapes the index: a change means existing documents are stale."""
+    s = settings
+    return "|".join(map(str, (INDEX_VERSION, embedder_id(s), s.chunk_target_words, s.chunk_max_words,
+                              s.table_rows_per_chunk, s.pii_mode, s.pii_model if s.pii_mode == "mask" else "")))
+
+
 class Ingestor:
     def __init__(self, settings: Settings, store: Store, embedder: Embedder,
                  llm: ChatModel | None = None):
         self.s, self.store, self.embedder, self.llm = settings, store, embedder, llm
+        self.embed_id, self.index_sig = embedder_id(settings), index_signature(settings)
         self.profiles = ProfileStore(settings.profiles_dir)
         self.overrides = OverrideStore(settings.profiles_dir)
         self.pii_detector: Detector | None = load_detector(settings) if settings.pii_mode == "mask" else None
 
-    def ingest_file(self, path: Path) -> IngestResult:
+    def _embed(self, texts: list[str], reuse: dict) -> np.ndarray:
+        """Embed only texts without a stored vector (unchanged chunks of an edited file are free)."""
+        todo = [t for t in dict.fromkeys(texts) if t not in reuse]
+        fresh = dict(zip(todo, self.embedder.embed(todo))) if todo else {}
+        return np.vstack([reuse[t] if t in reuse else fresh[t] for t in texts]) if texts else np.zeros((0, 1))
+
+    def ingest_file(self, path: Path, reuse: dict | None = None) -> IngestResult:
         sha = file_sha256(path)
         if (existing := self.store.find_by_hash(sha)):
             return IngestResult("duplicate", existing["id"])
@@ -105,7 +130,7 @@ class Ingestor:
             meta = self._meta(path, sha, doc, "", 0.0, "needs_ocr", 0)
             doc_id = self.store.save_document(meta, None, [])
             return IngestResult("needs_ocr", doc_id, warnings=doc.warnings)
-        return self._build(path, sha, doc)
+        return self._build(path, sha, doc, reuse or {})
 
     def _resolve_structure(self, doc: ParsedDoc, sha: str) -> tuple[ParsedDoc, Inference, list[Decision]]:
         overrides = self.overrides.get(sha)
@@ -142,9 +167,15 @@ class Ingestor:
               words: int, strategy: str = "", pii: dict | None = None) -> dict:
         return {"path": str(path), "sha256": sha, "format": doc.format, "title": doc.title,
                 "summary": summary, "words": words, "strategy": strategy, "confidence": conf,
-                "status": status, "warnings": list(doc.warnings), "pii": pii or {}}
+                "status": status, "warnings": list(doc.warnings), "pii": pii or {},
+                **self._file_sig(path), "embed_id": self.embed_id, "index_sig": self.index_sig}
 
-    def _build(self, path: Path, sha: str, doc: ParsedDoc) -> IngestResult:
+    @staticmethod
+    def _file_sig(path: Path) -> dict:
+        st = path.stat()
+        return {"mtime_ns": st.st_mtime_ns, "size": st.st_size}
+
+    def _build(self, path: Path, sha: str, doc: ParsedDoc, reuse: dict) -> IngestResult:
         doc, inf, decisions = self._resolve_structure(doc, sha)
         tree = build_tree(doc.title, doc.blocks, inf.levels)
         words = sum(len(b.text.split()) for b in doc.blocks)
@@ -167,10 +198,10 @@ class Ingestor:
             doc_summary, sections = masker.mask(doc_summary), [_mask_section(s, masker) for s in sections]
             doc = replace(doc, title=masker.mask(doc.title))
             pii = masker.counts
-        doc_vec = self.embedder.embed([f"{doc.title}\n{doc_summary}"])[0]
-        sec_vecs = self.embedder.embed([s["card"] for s in sections])
+        doc_vec = self._embed([f"{doc.title}\n{doc_summary}"], reuse)[0]
+        sec_vecs = self._embed([s["card"] for s in sections], reuse)
         flat = [c for s in sections for c in s["chunks"]]
-        chunk_vecs = self.embedder.embed([c.ctx for c in flat]) if flat else []
+        chunk_vecs = self._embed([c.ctx for c in flat], reuse)
         cursor = 0
         payload = []
         for s, sv in zip(sections, sec_vecs):
@@ -190,10 +221,22 @@ class Ingestor:
                             len(decisions), queued, doc.warnings, pii=pii)
 
     def reingest(self, doc_id: int) -> IngestResult:
-        """Rebuild a document from its stored file, e.g. after a human correction."""
-        row = self.store.conn.execute("SELECT path FROM documents WHERE id=?", (doc_id,)).fetchone()
+        """Rebuild a document from its stored file (file edited, index stale, or human correction).
+
+        An edited file is stored as a new version first and the old one removed only on success, so a
+        broken edit never wipes the index. Vectors of unchanged chunks are reused (same embedding model)."""
+        row = self.store.conn.execute(
+            "SELECT path, sha256, embed_id FROM documents WHERE id=?", (doc_id,)).fetchone()
         if not row or not Path(row["path"]).exists():
             return IngestResult("failed", error="source file is no longer available")
         path = Path(row["path"])
-        self.store.delete_document(doc_id)
-        return self.ingest_file(path)
+        reuse = self.store.reusable_embeddings(doc_id) if row["embed_id"] == self.embed_id else {}
+        if file_sha256(path) == row["sha256"]:      # same content: rebuild in place
+            self.store.delete_document(doc_id)
+            return self.ingest_file(path, reuse)
+        result = self.ingest_file(path, reuse)
+        if result.status in ("ingested", "needs_ocr", "duplicate"):   # duplicate: now identical to another doc
+            self.store.delete_document(doc_id)
+        if result.status == "ingested":
+            self.overrides.copy(row["sha256"], self.store.sha_of(result.doc_id))   # keep human corrections
+        return result

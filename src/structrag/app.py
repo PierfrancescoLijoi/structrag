@@ -23,6 +23,7 @@ class Services:
     ingestor: Ingestor
     retriever: Retriever
     chat: ChatService
+    syncer: object = None   # sync.Syncer, attached by build_services
 
 
 def build_services(settings: Settings | None = None, llm: ChatModel | None = None,
@@ -32,20 +33,16 @@ def build_services(settings: Settings | None = None, llm: ChatModel | None = Non
     llm = llm or LLM(settings)
     embedder = embedder or get_embedder(settings, llm if isinstance(llm, LLM) else None)
     ingestor = Ingestor(settings, store, embedder, llm)
-    retriever = Retriever(settings, store, embedder)
-    return Services(settings, store, llm, embedder, ingestor, retriever,
-                    ChatService(settings, store, retriever, llm))
-
-
-def scan_inbox(services: Services) -> list[tuple[str, IngestResult]]:
-    """Ingest every supported file in the inbox; already-known files are skipped by hash."""
-    results = []
-    inbox = services.settings.inbox_dir
-    inbox.mkdir(parents=True, exist_ok=True)
-    for path in sorted(inbox.iterdir()):
-        if path.is_file() and path.suffix.lower() in SUPPORTED:
-            results.append((path.name, services.ingestor.ingest_file(path)))
-    return results
+    reranker = None
+    if settings.rerank == "local":
+        from .llm.local import LocalReranker
+        reranker = LocalReranker(settings)
+    retriever = Retriever(settings, store, embedder, reranker)
+    from .sync import Syncer   # local import: sync depends on ingest, not on this module
+    services = Services(settings, store, llm, embedder, ingestor, retriever,
+                        ChatService(settings, store, retriever, llm))
+    services.syncer = Syncer(services)
+    return services
 
 
 def apply_review(services: Services, review_id: int, choice: str) -> IngestResult | None:

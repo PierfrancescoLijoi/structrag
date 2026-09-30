@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+local = ["fastembed>=0.7"]
 pii = ["transformers>=4.45", "torch>=2.3"]
 dev = ["pytest>=8", "reportlab>=4"]
 

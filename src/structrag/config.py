@@ -16,7 +16,7 @@ class Settings:
     base_url: str = field(default_factory=lambda: _env("BASE_URL", "http://127.0.0.1:11434/v1"))
     chat_model: str = field(default_factory=lambda: _env("CHAT_MODEL", "qwen3:4b-instruct-2507-q4_K_M"))
     embed_model: str = field(default_factory=lambda: _env("EMBED_MODEL", "qwen3-embedding:0.6b"))
-    # "hash" = offline feature-hashing embedder (no model needed, lower quality).
+    # "server" = OpenAI-compatible /embeddings; "local" = ONNX on CPU (fastembed); "hash" = offline lexical.
     embedder: str = field(default_factory=lambda: _env("EMBEDDER", "server"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", "data")))
     profiles_dir: Path = field(default_factory=lambda: Path(_env("PROFILES_DIR", "profiles")))
@@ -39,6 +39,16 @@ class Settings:
     top_docs: int = 5
     top_chunks: int = 8
     doc_prefilter_min_docs: int = 8
+
+    # Local (CPU, ONNX) models used when embedder="local" / rerank="local".
+    local_embed_model: str = field(default_factory=lambda: _env("LOCAL_EMBED_MODEL", "intfloat/multilingual-e5-small"))
+    local_rerank_model: str = field(default_factory=lambda: _env("LOCAL_RERANK_MODEL",
+                                                                 "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"))
+    local_threads: int = field(default_factory=lambda: int(_env("LOCAL_THREADS", "0")))   # 0 = auto (half the cores)
+    local_max_chars: int = 2400
+    rerank: str = field(default_factory=lambda: _env("RERANK", "off"))                    # off | local
+    rerank_candidates: int = 15
+    rerank_max_chars: int = 1200   # cross-encoder cost is ~linear in text length
 
     # PII: "off" | "mask" (rizzo-pii replaces identifiers with placeholders before embedding/storage).
     pii_mode: str = field(default_factory=lambda: _env("PII_MODE", "off"))

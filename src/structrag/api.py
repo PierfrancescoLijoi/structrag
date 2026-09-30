@@ -12,7 +12,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .app import Services, apply_review, scan_inbox
+from .app import Services, apply_review
 from .parsers import SUPPORTED
 
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "[::1]", "testserver"}   # blocks DNS-rebinding
@@ -138,7 +138,7 @@ def create_app(services: Services) -> FastAPI:
 
     @app.post("/api/inbox/scan")
     def inbox_scan() -> dict:
-        return {"ingested": [(name, r.status) for name, r in scan_inbox(services)]}
+        return services.syncer.run().as_dict()
 
     @app.get("/api/jobs")
     def list_jobs() -> list[dict]:

@@ -11,3 +11,6 @@ data/inbox/*
 *.sqlite-*
 .env
 dist/
+eval/bench/docs/
+eval/bench/.cache/
+eval/bench/results/

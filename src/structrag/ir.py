@@ -34,6 +34,8 @@ class Block:
 def table_parts(block: Block) -> tuple[list[str], list[tuple[str, ...]], list[tuple[str, ...]]]:
     """(column names, preamble rows above the header, data rows) of a TABLE block."""
     idx = block.meta.get("header_row", 0)
+    if idx < 0:   # header lives in an earlier block: every row is data
+        return list(block.meta["column_names"]), [], list(block.rows)
     names = block.meta.get("column_names") or list(block.rows[idx])
     return list(names), list(block.rows[:idx]), list(block.rows[idx + 1:])
 

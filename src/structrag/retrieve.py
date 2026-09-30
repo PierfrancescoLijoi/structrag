@@ -49,8 +49,12 @@ def _top(scores: np.ndarray, ids: list[int], n: int) -> list[int]:
 
 
 class Retriever:
-    def __init__(self, settings: Settings, store: Store, embedder: Embedder):
-        self.s, self.store, self.embedder = settings, store, embedder
+    def __init__(self, settings: Settings, store: Store, embedder: Embedder, reranker=None):
+        self.s, self.store, self.embedder, self.reranker = settings, store, embedder, reranker
+
+    def _embed_query(self, query: str) -> np.ndarray:
+        embed = getattr(self.embedder, "embed_query", self.embedder.embed)   # asymmetric models need a query mode
+        return embed([query])[0]
 
     def _scope(self, qv: np.ndarray, query: str, doc_ids: list[int] | None) -> tuple[int, ...] | None:
         """Stage 1: shortlist documents by their summary card (skipped for small corpora)."""
@@ -68,7 +72,7 @@ class Retriever:
 
     def search(self, query: str, doc_ids: list[int] | None = None, k: int | None = None) -> list[Hit]:
         k = k or self.s.top_chunks
-        qv = self.embedder.embed([query])[0]
+        qv = self._embed_query(query)
         scope = self._scope(qv, query, doc_ids)
         if not scope:
             return []
@@ -90,10 +94,26 @@ class Retriever:
         for weight, ranking in rankings:
             for rank, cid in enumerate(ranking):
                 fused[cid] = fused.get(cid, 0.0) + weight / (RRF_K + rank + 1)
-        best = sorted(fused, key=fused.get, reverse=True)[:k]
-        rows = self.store.chunks_by_ids(best)
-        return [Hit(cid, r["doc_id"], r["doc_title"], r["section_id"], r["section_path"], r["loc"],
-                    r["text"], r["kind"], fused[cid]) for cid in best if (r := rows.get(cid))]
+        pool = sorted(fused, key=fused.get, reverse=True)[:max(k, self.s.rerank_candidates if self.reranker else k)]
+        rows = self.store.chunks_by_ids(pool)
+        pool = [cid for cid in pool if cid in rows]
+        if self.reranker and pool:
+            scores = self.reranker.scores(query, [rows[cid]["ctx"] for cid in pool])
+            fused = dict(zip(pool, scores))
+            pool.sort(key=fused.get, reverse=True)
+        seen: set[str] = set()
+        hits = []
+        for cid in pool:
+            key = " ".join(rows[cid]["text"].lower().split())
+            if key in seen:
+                continue
+            seen.add(key)
+            r = rows[cid]
+            hits.append(Hit(cid, r["doc_id"], r["doc_title"], r["section_id"], r["section_path"], r["loc"],
+                            r["text"], r["kind"], fused[cid]))
+            if len(hits) == k:
+                break
+        return hits
 
     def build_context(self, hits: list[Hit]) -> list[Context]:
         """Merge hits per section; expand small sections to their full text."""

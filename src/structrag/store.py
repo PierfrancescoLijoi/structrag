@@ -20,7 +20,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents(
   id INTEGER PRIMARY KEY, path TEXT, sha256 TEXT UNIQUE, format TEXT, title TEXT, summary TEXT,
   emb BLOB, n_sections INTEGER, n_chunks INTEGER, words INTEGER, strategy TEXT,
-  confidence REAL, status TEXT, warnings TEXT, ingested_at REAL, pii TEXT);
+  confidence REAL, status TEXT, warnings TEXT, ingested_at REAL, pii TEXT,
+  mtime_ns INTEGER, size INTEGER, embed_id TEXT, index_sig TEXT);
 CREATE TABLE IF NOT EXISTS sections(
   id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
   ordinal INTEGER, level INTEGER, title TEXT, path TEXT, summary TEXT, emb BLOB);
@@ -66,8 +67,11 @@ class Store:
         self._lock = threading.RLock()
         with self.conn:
             self.conn.executescript(SCHEMA)
-            if "pii" not in {r["name"] for r in self.conn.execute("PRAGMA table_info(documents)")}:
-                self.conn.execute("ALTER TABLE documents ADD COLUMN pii TEXT")   # DBs created before PII masking
+            have = {r["name"] for r in self.conn.execute("PRAGMA table_info(documents)")}
+            for col, kind in (("pii", "TEXT"), ("mtime_ns", "INTEGER"), ("size", "INTEGER"),
+                              ("embed_id", "TEXT"), ("index_sig", "TEXT")):
+                if col not in have:                                   # DBs created by older versions
+                    self.conn.execute(f"ALTER TABLE documents ADD COLUMN {col} {kind}")
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -80,6 +84,9 @@ class Store:
         return self._local.conn
 
     # ---- documents -------------------------------------------------------------------------
+    def sha_of(self, doc_id: int) -> str:
+        return self.conn.execute("SELECT sha256 FROM documents WHERE id=?", (doc_id,)).fetchone()[0]
+
     def find_by_hash(self, sha: str) -> sqlite3.Row | None:
         return self.conn.execute("SELECT * FROM documents WHERE sha256=?", (sha,)).fetchone()
 
@@ -88,12 +95,14 @@ class Store:
         with self._lock, self.conn as c:
             cur = c.execute(
                 "INSERT INTO documents(path,sha256,format,title,summary,emb,n_sections,n_chunks,words,"
-                "strategy,confidence,status,warnings,ingested_at,pii) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "strategy,confidence,status,warnings,ingested_at,pii,mtime_ns,size,embed_id,index_sig) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["path"], meta["sha256"], meta["format"], meta["title"], meta["summary"],
                  _blob(doc_emb) if doc_emb is not None else None, len(sections),
                  sum(len(s["chunks"]) for s in sections), meta["words"], meta["strategy"],
                  meta["confidence"], meta["status"], json.dumps(meta.get("warnings", [])), time.time(),
-                 json.dumps(meta.get("pii", {}))))
+                 json.dumps(meta.get("pii", {})), meta.get("mtime_ns"), meta.get("size"),
+                 meta.get("embed_id"), meta.get("index_sig")))
             doc_id = cur.lastrowid
             for ordinal, s in enumerate(sections):
                 sc = c.execute(
@@ -106,6 +115,33 @@ class Store:
                     c.execute("INSERT INTO chunk_fts(rowid,ctx) VALUES(?,?)", (cc.lastrowid, ch["ctx"]))
             self._version += 1
         return doc_id
+
+    def sync_rows(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT id,path,sha256,mtime_ns,size,embed_id,index_sig,status FROM documents").fetchall()
+
+    def set_location(self, doc_id: int, path: str | None = None, mtime_ns: int | None = None,
+                     size: int | None = None) -> None:
+        with self._lock, self.conn as c:
+            if path is not None:
+                c.execute("UPDATE documents SET path=? WHERE id=?", (path, doc_id))
+            if mtime_ns is not None:
+                c.execute("UPDATE documents SET mtime_ns=?, size=? WHERE id=?", (mtime_ns, size, doc_id))
+
+    def reusable_embeddings(self, doc_id: int) -> dict[str, np.ndarray]:
+        """text -> vector for every chunk / section card / doc card of a document, so an edit only
+        re-embeds what actually changed."""
+        out: dict[str, np.ndarray] = {}
+        for r in self.conn.execute("SELECT ctx, emb FROM chunks WHERE doc_id=?", (doc_id,)):
+            if r["emb"]:
+                out[r["ctx"]] = _vec(r["emb"])
+        for r in self.conn.execute("SELECT path, summary, emb FROM sections WHERE doc_id=?", (doc_id,)):
+            if r["emb"]:
+                out[f"{r['path']}\n{r['summary']}"] = _vec(r["emb"])
+        d = self.conn.execute("SELECT title, summary, emb FROM documents WHERE id=?", (doc_id,)).fetchone()
+        if d and d["emb"]:
+            out[f"{d['title']}\n{d['summary']}"] = _vec(d["emb"])
+        return out
 
     def delete_document(self, doc_id: int) -> None:
         with self._lock, self.conn as c:
@@ -159,7 +195,7 @@ class Store:
     def chunks_by_ids(self, ids: list[int]) -> dict[int, dict]:
         if not ids:
             return {}
-        q = ("SELECT c.id,c.doc_id,c.section_id,c.text,c.kind,c.loc,d.title AS doc_title,"
+        q = ("SELECT c.id,c.doc_id,c.section_id,c.text,c.ctx,c.kind,c.loc,d.title AS doc_title,"
              "s.title AS section_title,s.path AS section_path FROM chunks c "
              "JOIN documents d ON d.id=c.doc_id JOIN sections s ON s.id=c.section_id "
              f"WHERE c.id IN ({','.join('?' * len(ids))})")

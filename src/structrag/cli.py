@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-from .app import Services, build_services, scan_inbox
+from .app import Services, build_services
 from .config import Settings
 from .parsers import SUPPORTED
 
@@ -31,17 +31,27 @@ def cmd_ingest(sv: Services, args) -> int:
     return 1 if failed else 0
 
 
+def _print_sync(report) -> None:
+    for kind, names in report.as_dict().items():
+        for name in names:
+            print(f"{kind:8} {name}" + (f"  ({names[name]})" if kind == "failed" else ""))
+
+
 def cmd_scan(sv: Services, args) -> int:
-    for name, r in scan_inbox(sv):
-        print(f"{r.status:10} {name}")
-    return 0
+    report = sv.syncer.run()
+    _print_sync(report)
+    return 1 if report.failed else 0
 
 
 def _watch_loop(sv: Services, interval: float, stop: threading.Event) -> None:
     while not stop.is_set():
-        for name, r in scan_inbox(sv):
-            if r.status not in ("duplicate",):
-                logging.getLogger("structrag.watch").info("%s: %s", name, r.status)
+        try:
+            report = sv.syncer.run()
+        except Exception:   # a bad round must not kill the watcher
+            logging.getLogger("structrag.watch").exception("sync failed")
+        else:
+            if report.changed:
+                logging.getLogger("structrag.watch").info("sync: %s", report.as_dict())
         stop.wait(interval)
 
 

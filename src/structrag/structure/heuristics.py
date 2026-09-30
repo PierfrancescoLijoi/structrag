@@ -26,6 +26,8 @@ KEYWORD = re.compile(
     r"^(chapter|capitolo|section|sezione|part|parte|appendix|appendice|allegato|articolo|art\.)\s+"
     r"([0-9]+|[ivxlc]+|[a-z])\b", re.I)
 TRAILING = tuple(".,;")
+MIN_HEADING_LETTERS = 3
+MIN_LETTER_SHARE = 0.5         # table rows ("73.7 79.4 84.6") and figure debris are not headings
 
 
 @dataclass(frozen=True)
@@ -47,9 +49,15 @@ def dominant_style(blocks: tuple[Block, ...]) -> str:
     return weight.most_common(1)[0][0] if weight else ""
 
 
+def _wordlike(text: str) -> bool:
+    compact = [c for c in text if not c.isspace()]
+    letters = sum(c.isalpha() for c in compact)
+    return letters >= MIN_HEADING_LETTERS and letters / len(compact) >= MIN_LETTER_SHARE
+
+
 def _headingish(b: Block) -> bool:
     return (b.kind in (PARA, LIST_ITEM) and 0 < len(b.text) <= MAX_HEADING_CHARS
-            and not b.text.rstrip().endswith(TRAILING) and b.level_hint is None)
+            and not b.text.rstrip().endswith(TRAILING) and b.level_hint is None and _wordlike(b.text))
 
 
 def _body_size(blocks: tuple[Block, ...]) -> float | None:
@@ -133,7 +141,8 @@ def infer(doc: ParsedDoc, profile: dict[str, int] | None = None) -> Inference:
     body_key = dominant_style(blocks)
     words = sum(len(b.text.split()) for b in blocks)
 
-    if (hinted := _explicit(doc)) is not None:
+    hinted = _explicit(doc)
+    if hinted is not None and doc.format != "pdf":
         return Inference(hinted, 0.95, "explicit", [], body_key)
 
     if profile:
@@ -154,9 +163,14 @@ def infer(doc: ParsedDoc, profile: dict[str, int] | None = None) -> Inference:
     levels: list[int | None] = [b.level_hint for b in blocks]   # keep partial explicit hints
     ambiguous: list[int] = []
     for i, (level, strong) in cands.items():
+        if hinted is not None and not strong:
+            continue                       # PDF bookmarks are partial: only strong extras join them
         levels[i] = level
         if not strong:
             ambiguous.append(i)
+    if hinted is not None:                 # PDF outline lists top-level chapters only: add numbered sub-headings
+        strategy = "outline+" + strategy if cands else "explicit"
+        return Inference(levels, 0.90, strategy, ambiguous, body_key)
     if not cands:
         conf = 0.2 if words >= LONG_DOC_WORDS else 0.6
         return Inference(levels, conf, "none", [], body_key, ("no headings detected",))

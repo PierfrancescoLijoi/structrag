@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from conftest import heading_oracle, make_pdf
 from structrag.api import create_app
-from structrag.app import apply_review, build_services, scan_inbox
+from structrag.app import apply_review, build_services
 from structrag.llm.fake import FakeLLM
 
 H = {"X-Requested-With": "test"}
@@ -82,8 +82,9 @@ def test_uncertain_agent_goes_to_review_and_human_answer_sticks(settings, tmp_pa
 def test_inbox_scan_ingests_once(services):
     services.settings.inbox_dir.mkdir(parents=True, exist_ok=True)
     make_pdf(services.settings.inbox_dir / "d.pdf")
-    assert scan_inbox(services)[0][1].status == "ingested"
-    assert scan_inbox(services)[0][1].status == "duplicate"
+    services.syncer.settle = 0
+    assert services.syncer.run().added == ["d.pdf"]
+    assert not services.syncer.run().changed
 
 
 def test_api_blocks_foreign_hosts_and_missing_csrf_header(services):
