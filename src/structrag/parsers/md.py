@@ -4,12 +4,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ..ir import LIST_ITEM, PARA, TABLE, Block, ParsedDoc
+from ..config import Settings
+from ..ir import IMAGE, LIST_ITEM, PARA, TABLE, Block, ParsedDoc
+from ..vision import get_reader
 
 ATX = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 SETEXT = re.compile(r"^(=+|-+)\s*$")
 FENCE = re.compile(r"^\s*(```|~~~)")
 LIST = re.compile(r"^\s*([-*+]|\d+[.)])\s+(.*)")
+IMG = re.compile(r"^\s*!\[(?P<alt>[^\]]*)\]\((?P<src>[^)\s]+)(?:\s+\"[^\"]*\")?\)\s*$")
 TABLE_SEP = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
 
 
@@ -17,7 +20,18 @@ def _split_row(line: str) -> tuple[str, ...]:
     return tuple(c.strip() for c in line.strip().strip("|").split("|"))
 
 
-def parse(path: Path) -> ParsedDoc:
+def _image_block(match: re.Match, base: Path, settings: Settings | None) -> Block | None:
+    """Local images are read (OCR / vision); remote ones and unreadable ones fall back to their alt text."""
+    alt, src = match.group("alt").strip(), match.group("src")
+    target = (base / src).resolve() if "://" not in src else None
+    reader = get_reader(settings or Settings())
+    if target and target.is_file() and (reader.ocr_enabled or reader.vision_enabled):
+        if (read := reader.read_bytes(target.read_bytes(), alt)):
+            return Block(read[1], IMAGE, meta={"image": read[0].sha})
+    return Block(f"[Figure] {alt}", PARA) if alt else None
+
+
+def parse(path: Path, settings: Settings | None = None) -> ParsedDoc:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     if lines and lines[0].strip() == "---":  # skip YAML front matter
         end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
@@ -44,6 +58,12 @@ def parse(path: Path) -> ParsedDoc:
             continue
         if in_code:
             para.append(line)
+            i += 1
+            continue
+        if (img := IMG.match(line)):
+            flush()
+            if (block := _image_block(img, path.parent, settings)):
+                blocks.append(block)
             i += 1
             continue
         atx = ATX.match(line)

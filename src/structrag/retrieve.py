@@ -31,6 +31,7 @@ class Hit:
     text: str
     kind: str
     score: float
+    ref: str = ""
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,9 @@ class Context:
     section_path: str
     loc: str
     text: str
+    kind: str = "text"
+    ref: str = ""            # thumbnail id when the best hit of this source is a figure
+    score: float = 0.0       # best relevance score among the merged hits
 
 
 def _top(scores: np.ndarray, ids: list[int], n: int) -> list[int]:
@@ -111,7 +115,7 @@ class Retriever:
             seen.add(key)
             r = rows[cid]
             hits.append(Hit(cid, r["doc_id"], r["doc_title"], r["section_id"], r["section_path"], r["loc"],
-                            r["text"], r["kind"], fused[cid]))
+                            r["text"], r["kind"], fused[cid], r["ref"] or ""))
             if len(hits) == k:
                 break
         return hits
@@ -132,7 +136,10 @@ class Retriever:
                     break
                 text = text[:budget]
             first = group[0]
-            out.append(Context(len(out) + 1, first.doc_id, first.doc_title, first.section_path, first.loc, text))
+            figure = next((h for h in group if h.kind == "image"), None)
+            out.append(Context(len(out) + 1, first.doc_id, first.doc_title, first.section_path, first.loc, text,
+                               "image" if figure else first.kind, figure.ref if figure else "",
+                               max(h.score for h in group)))
             budget -= len(text)
             if budget <= 0:
                 break

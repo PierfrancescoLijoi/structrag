@@ -8,7 +8,8 @@ from ..ir import ParsedDoc
 
 ZIP_MAGIC = b"PK\x03\x04"
 PDF_MAGIC = b"%PDF"
-SUPPORTED = {".md", ".markdown", ".txt", ".docx", ".pptx", ".xlsx", ".pdf"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
+SUPPORTED = {".md", ".markdown", ".txt", ".docx", ".pptx", ".xlsx", ".pdf"} | IMAGE_EXTS
 
 
 class UnsupportedFormat(ValueError):
@@ -29,17 +30,21 @@ def parse_file(path: Path, settings: Settings | None = None) -> ParsedDoc:
     if ext not in SUPPORTED:
         raise UnsupportedFormat(f"unsupported extension '{ext}'")
     _check_magic(path, ext)
+    settings = settings or Settings()
+    if ext in IMAGE_EXTS:
+        from . import image
+        return image.parse(path, settings)
     if ext in (".md", ".markdown", ".txt"):
         from . import md
-        return md.parse(path)
+        return md.parse(path, settings)
     if ext == ".docx":
         from . import docx
-        return docx.parse(path)
+        return docx.parse(path, settings)
     if ext == ".pptx":
         from . import pptx
-        return pptx.parse(path)
+        return pptx.parse(path, settings)
     if ext == ".xlsx":
         from . import xlsx
         return xlsx.parse(path, settings)
     from . import pdf
-    return pdf.parse(path)
+    return pdf.parse(path, settings)

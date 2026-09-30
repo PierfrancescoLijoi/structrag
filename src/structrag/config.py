@@ -51,6 +51,16 @@ class Settings:
     rerank_candidates: int = 30
     rerank_max_chars: int = 1200   # cross-encoder cost is ~linear in text length
 
+    # Images: OCR (RapidOCR, CPU) for figures, scanned pages and image files; optional local vision model
+    # (any OpenAI-compatible server with a vision model, e.g. llama-server + SmolVLM2 / Qwen2.5-VL).
+    ocr: str = field(default_factory=lambda: _env("OCR", "auto"))                    # auto | off
+    ocr_lang: str = field(default_factory=lambda: _env("OCR_LANG", "latin"))         # latin | en | ch | ...
+    ocr_dpi: int = 200
+    ocr_min_page_chars: int = 40      # PDF pages with less native text than this are OCR'd whole
+    ocr_min_figure_share: float = 0.06   # embedded PDF images below this share of the page area are ignored
+    vision_model: str = field(default_factory=lambda: _env("VISION_MODEL", ""))
+    vision_base_url: str = field(default_factory=lambda: _env("VISION_BASE_URL", ""))
+
     # PII: "off" | "mask" (rizzo-pii replaces identifiers with placeholders before embedding/storage).
     pii_mode: str = field(default_factory=lambda: _env("PII_MODE", "off"))
     pii_model: str = field(default_factory=lambda: _env("PII_MODEL", "rizzoaiacademy/rizzo-pii-0.3B"))

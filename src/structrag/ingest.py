@@ -213,7 +213,8 @@ class Ingestor:
         for s, sv in zip(sections, sec_vecs):
             chs = []
             for c in s["chunks"]:
-                chs.append({"text": c.text, "ctx": c.ctx, "kind": c.kind, "loc": c.loc, "emb": chunk_vecs[cursor]})
+                chs.append({"text": c.text, "ctx": c.ctx, "kind": c.kind, "loc": c.loc, "ref": c.ref,
+                            "emb": chunk_vecs[cursor]})
                 cursor += 1
             payload.append({**s, "emb": sv, "chunks": chs})
 

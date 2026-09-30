@@ -9,7 +9,9 @@ from docx.oxml.ns import qn
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
-from ..ir import LIST_ITEM, PARA, TABLE, Block, ParsedDoc
+from ..config import Settings
+from ..ir import IMAGE, LIST_ITEM, PARA, TABLE, Block, ParsedDoc
+from ..vision import get_reader
 
 HEADING_STYLE = re.compile(r"^(heading|titolo|überschrift|título|titre)\s*(\d+)$", re.I)
 TITLE_STYLES = {"title", "titolo"}
@@ -72,18 +74,39 @@ def _table_block(table: Table) -> Block | None:
     return Block("\n".join(" | ".join(r) for r in rows), TABLE, rows=tuple(rows))
 
 
-def parse(path: Path) -> ParsedDoc:
+def _image_blocks(par_element, doc, reader, seen: set[str]) -> list[Block]:
+    """Pictures anchored in a paragraph, in order. Repeated images (logos, letterheads) are read once."""
+    out = []
+    for blip in par_element.iter(qn("a:blip")):
+        rid = blip.get(qn("r:embed"))
+        part = doc.part.related_parts.get(rid) if rid else None
+        if part is None:
+            continue
+        alt = next((d.get("descr") or d.get("title") or "" for d in par_element.iter(qn("wp:docPr"))), "")
+        read = reader.read_bytes(part.blob, alt)
+        if read and read[0].sha not in seen:
+            seen.add(read[0].sha)
+            out.append(Block(read[1], IMAGE, meta={"image": read[0].sha}))
+    return out
+
+
+def parse(path: Path, settings: Settings | None = None) -> ParsedDoc:
     doc = Document(str(path))
+    reader = get_reader(settings or Settings())
+    read_images = reader.ocr_enabled or reader.vision_enabled
     blocks: list[Block] = []
+    seen: set[str] = set()
     for child in doc.element.body.iterchildren():
         if child.tag == qn("w:p"):
             block = _paragraph_block(Paragraph(child, doc))
+            extra = _image_blocks(child, doc, reader, seen) if read_images else []
         elif child.tag == qn("w:tbl"):
-            block = _table_block(Table(child, doc))
+            block, extra = _table_block(Table(child, doc)), []
         else:
             continue
         if block:
             blocks.append(block)
+        blocks.extend(extra)
     title = doc.core_properties.title or next(
         (b.text for b in blocks if b.level_hint == 1), path.stem)
     return ParsedDoc(title=title, format="docx", blocks=tuple(blocks))

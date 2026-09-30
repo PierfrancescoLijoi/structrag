@@ -22,7 +22,7 @@ LOREM = ("The quick brown fox jumps over the lazy dog while the committee review
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    return Settings(data_dir=tmp_path / "data", profiles_dir=tmp_path / "profiles", embedder="hash", rerank="off")
+    return Settings(data_dir=tmp_path / "data", profiles_dir=tmp_path / "profiles", embedder="hash", rerank="off", ocr="off")
 
 
 def heading_oracle(*titles: str):

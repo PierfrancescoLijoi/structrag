@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-PARA, TABLE, LIST_ITEM = "para", "table", "list_item"
+PARA, TABLE, LIST_ITEM, IMAGE = "para", "table", "list_item", "image"
 
 
 @dataclass(frozen=True)

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sections(
 CREATE TABLE IF NOT EXISTS chunks(
   id INTEGER PRIMARY KEY, doc_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
   section_id INTEGER REFERENCES sections(id) ON DELETE CASCADE, ordinal INTEGER,
-  text TEXT, ctx TEXT, kind TEXT, loc TEXT, emb BLOB);
+  text TEXT, ctx TEXT, kind TEXT, loc TEXT, emb BLOB, ref TEXT);
 CREATE INDEX IF NOT EXISTS chunks_doc ON chunks(doc_id);
 CREATE INDEX IF NOT EXISTS chunks_section ON chunks(section_id);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(ctx, tokenize='unicode61 remove_diacritics 2');
@@ -68,6 +68,9 @@ class Store:
         with self.conn:
             self.conn.executescript(SCHEMA)
             have = {r["name"] for r in self.conn.execute("PRAGMA table_info(documents)")}
+            chunk_cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(chunks)")}
+            if "ref" not in chunk_cols:
+                self.conn.execute("ALTER TABLE chunks ADD COLUMN ref TEXT")
             for col, kind in (("pii", "TEXT"), ("mtime_ns", "INTEGER"), ("size", "INTEGER"),
                               ("embed_id", "TEXT"), ("index_sig", "TEXT")):
                 if col not in have:                                   # DBs created by older versions
@@ -110,8 +113,9 @@ class Store:
                     (doc_id, ordinal, s["level"], s["title"], s["path"], s["summary"], _blob(s["emb"])))
                 for k, ch in enumerate(s["chunks"]):
                     cc = c.execute(
-                        "INSERT INTO chunks(doc_id,section_id,ordinal,text,ctx,kind,loc,emb) VALUES(?,?,?,?,?,?,?,?)",
-                        (doc_id, sc.lastrowid, k, ch["text"], ch["ctx"], ch["kind"], ch["loc"], _blob(ch["emb"])))
+                        "INSERT INTO chunks(doc_id,section_id,ordinal,text,ctx,kind,loc,emb,ref) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (doc_id, sc.lastrowid, k, ch["text"], ch["ctx"], ch["kind"], ch["loc"], _blob(ch["emb"]),
+                         ch.get("ref", "")))
                     c.execute("INSERT INTO chunk_fts(rowid,ctx) VALUES(?,?)", (cc.lastrowid, ch["ctx"]))
             self._version += 1
         return doc_id
@@ -195,7 +199,7 @@ class Store:
     def chunks_by_ids(self, ids: list[int]) -> dict[int, dict]:
         if not ids:
             return {}
-        q = ("SELECT c.id,c.doc_id,c.section_id,c.text,c.ctx,c.kind,c.loc,d.title AS doc_title,"
+        q = ("SELECT c.id,c.doc_id,c.section_id,c.text,c.ctx,c.kind,c.loc,c.ref,d.title AS doc_title,"
              "s.title AS section_title,s.path AS section_path FROM chunks c "
              "JOIN documents d ON d.id=c.doc_id JOIN sections s ON s.id=c.section_id "
              f"WHERE c.id IN ({','.join('?' * len(ids))})")

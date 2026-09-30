@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 local = ["fastembed>=0.7"]
+ocr = ["rapidocr>=3.9", "pypdfium2>=4", "pillow>=10"]
 pii = ["transformers>=4.45", "torch>=2.3"]
 dev = ["pytest>=8", "reportlab>=4"]
 

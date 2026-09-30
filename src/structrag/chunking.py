@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 
 from .config import Settings
-from .ir import LIST_ITEM, TABLE, Block, Section, table_parts
+from .ir import IMAGE, LIST_ITEM, TABLE, Block, Section, table_parts
 
 SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
@@ -19,8 +19,9 @@ class Chunk:
     ordinal: int
     text: str
     ctx: str          # breadcrumb + text: what gets embedded and indexed
-    kind: str         # "text" | "table"
+    kind: str         # "text" | "table" | "image"
     loc: str
+    ref: str = ""     # image thumbnail id for kind == "image"
 
 
 def _words(text: str) -> int:
@@ -77,9 +78,9 @@ def chunk_section(section: Section, crumb: tuple[str, ...], settings: Settings,
     buf: list[str] = []
     buf_loc = ""
 
-    def emit(text: str, kind: str, loc: str) -> None:
+    def emit(text: str, kind: str, loc: str, ref: str = "") -> None:
         ctx = f"{prefix}\n{text}" if prefix else text
-        chunks.append(Chunk(start + len(chunks), text, ctx, kind, loc))
+        chunks.append(Chunk(start + len(chunks), text, ctx, kind, loc, ref))
 
     def flush() -> None:
         nonlocal buf, buf_loc
@@ -88,6 +89,12 @@ def chunk_section(section: Section, crumb: tuple[str, ...], settings: Settings,
         buf, buf_loc = [], ""
 
     for block in section.blocks:
+        if block.kind == IMAGE:      # a figure is its own chunk: its caption/OCR must not blur into the prose
+            flush()
+            pieces = _split_long(block.text, settings.chunk_max_words) if _words(block.text) > settings.chunk_max_words else [block.text]
+            for piece in pieces:
+                emit(piece, "image", block.loc, block.meta.get("image", ""))
+            continue
         if block.kind == TABLE:
             flush()
             for text, loc in _table_chunks(block, settings):
