@@ -1,8 +1,10 @@
+import logging
 from dataclasses import replace
 
 from conftest import heading_oracle
 from structrag.chunking import chunk_section
 from structrag.ir import PARA, TABLE, Block, ParsedDoc, Section
+from structrag.llm.client import LLMError
 from structrag.llm.fake import FakeLLM
 from structrag.parsers import parse_file
 from structrag.structure.heuristics import infer
@@ -47,6 +49,18 @@ def test_bold_only_candidates_are_ambiguous_and_the_agent_decides(docx_bold_only
     kept = [doc.blocks[i].text for i, lv in enumerate(levels) if lv]
     assert kept == ["Safety rules", "Emergency exits"]          # 'Maintenance' rejected
     assert all(d.accepted for d in decisions)
+
+
+def test_unreachable_model_is_logged_and_keeps_the_heuristic_structure(docx_bold_only, caplog):
+    class Down:
+        def choose(self, *a, **k):
+            raise LLMError("connection refused")
+    doc = parse_file(docx_bold_only)
+    inf = infer(doc)
+    with caplog.at_level(logging.WARNING, logger="structrag.structure.resolver"):
+        levels, decisions = resolve_headings(doc, inf, Down(), _settings())
+    assert decisions == [] and levels == inf.levels
+    assert "connection refused" in caplog.text
 
 
 def test_low_confidence_agent_answer_is_not_applied_and_stays_reviewable(docx_bold_only):

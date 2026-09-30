@@ -14,3 +14,5 @@ dist/
 eval/bench/docs/
 eval/bench/.cache/
 eval/bench/results/
+eval/bench/docs_img/
+eval/bench/*.log

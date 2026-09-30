@@ -7,6 +7,7 @@ Known limit (roadmap): no table extraction.
 """
 from __future__ import annotations
 
+import codecs
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from pdfminer.layout import (LAParams, LTChar, LTCurve, LTFigure, LTImage, LTLin
                              LTTextLine)
 from pdfminer.pdfdocument import PDFDocument, PDFNoOutlines
 from pdfminer.pdfparser import PDFParser
+from pdfminer.pdftypes import resolve1
 
 from ..config import Settings
 from ..ir import IMAGE, LIST_ITEM, PARA, Block, ParsedDoc
@@ -274,6 +276,26 @@ def _scanned_page_blocks(path: Path, pages: list[int], reader: ImageReader, sett
     return out
 
 
+UNUSABLE_TITLE = re.compile(r"microsoft word|untitled|printmgr|\.(docx?|pdf|tex|indd|pptx?)\b|^scan_", re.I)
+
+
+def _meta_title(path: Path) -> str:
+    """The title stored in the PDF metadata when it is a real one (Wikipedia prints, publisher files), else ''."""
+    try:
+        with open(path, "rb") as fh:
+            raw = resolve1((PDFDocument(PDFParser(fh)).info or [{}])[0].get("Title")) or b""
+    except Exception:   # a broken info dictionary must not block ingestion
+        return ""
+    if not isinstance(raw, bytes):
+        return ""
+    utf16 = raw.startswith((codecs.BOM_UTF16_BE, codecs.BOM_UTF16_LE))
+    try:
+        text = raw.decode("utf-16" if utf16 else "utf-8").strip()
+    except UnicodeDecodeError:      # PDFDocEncoding is close to latin-1; dropping bytes would turn "Società" into "Societ"
+        text = raw.decode("latin-1").strip()
+    return "" if len(text) < 4 or UNUSABLE_TITLE.search(text) or not any(c.isalpha() for c in text) else text
+
+
 def parse(path: Path, settings: Settings | None = None) -> ParsedDoc:
     settings = settings or Settings()
     reader = get_reader(settings) if settings.ocr != "off" else None
@@ -307,4 +329,4 @@ def parse(path: Path, settings: Settings | None = None) -> ParsedDoc:
     if figures and not ocr:
         warnings.append("embedded images were not read (install structrag[ocr])")
     warnings.append("tables are not extracted from PDFs yet") if figures else None
-    return ParsedDoc(title=path.stem, format="pdf", blocks=tuple(blocks), warnings=tuple(w for w in warnings if w))
+    return ParsedDoc(title=_meta_title(path) or path.stem, format="pdf", blocks=tuple(blocks), warnings=tuple(w for w in warnings if w))

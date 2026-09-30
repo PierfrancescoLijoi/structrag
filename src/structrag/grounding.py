@@ -28,6 +28,14 @@ META = frozenset("context passage passages document documents answer answers acc
                  "states state based given text information source sources paragraph section question contesto "
                  "passaggio documento documenti risposta secondo fornito indicato testo fonte fonti domanda".split())
 MIN_TERM_LEN = 3
+# "The 40th Fibonacci number is not listed in the provided passages": a note about the sources, not a claim.
+ABSENCE = re.compile(
+    r"\b(?:not|no|non|nessun\w*|senza)\b[^.;]{0,60}?\b(?:listed|mentioned|stated|specified|provided|found|"
+    r"elencat\w*|menzionat\w*|riportat\w*|indicat\w*|specificat\w*|fornit\w*|trovat\w*)\b[^.;]{0,20}?"
+    r"\b(?:in|nei|nel|nelle|nello|nella|from)\s+(?:(?:the|these|this|those|i|le|questi|queste|gli)\s+)?"
+    r"(?:(?:provided|given|available|forniti|fornite|disponibili)\s+)?"
+    r"(?:passages?|documents?|sources?|context|passagg\w*|documenti|fonti|contesto)"
+    r"(?:\s+(?:provided|given|above|forniti|fornite))?\W*$", re.I)   # must END the sentence: "not found in the source code" stays
 
 
 @dataclass(frozen=True)
@@ -105,6 +113,17 @@ def best_evidence(sentence: str, passage: str) -> str:
     return max(scored)[2][:400]
 
 
+def excerpt(claim: str, passage: str, radius: int = 2, max_chars: int = 1400) -> str:
+    """The stretch of `passage` around the sentence that best matches `claim`: what a verifier needs to read.
+    (Whole passages can be pages long; truncating them from the top would cut the evidence off.)"""
+    sentences = split_sentences(passage) or [passage]
+    terms = content_terms(claim)
+    best = max(range(len(sentences)), key=lambda i: (len(terms & content_terms(sentences[i])), -abs(len(sentences[i]) - 200)))
+    lo, hi = max(0, best - radius), min(len(sentences), best + radius + 1)
+    text = " ".join(sentences[lo:hi])
+    return text if len(text) <= max_chars else text[:max_chars]
+
+
 def _cited(sentence: str, n_passages: int) -> tuple[int, ...]:
     seen: list[int] = []
     for m in CITE.finditer(sentence):
@@ -122,6 +141,9 @@ def check_answer(answer: str, passages: list[str], min_support: float) -> Checke
     for raw in split_sentences(answer):
         body = re.sub(r"\s+([.,;:!?])", r"\1", CITE.sub("", raw)).strip(" \t-•*")
         if len(re.sub(r"\W", "", body)) < 2:
+            continue
+        if ABSENCE.search(body):
+            out.dropped.append((body, "says the sources lack the answer"))
             continue
         nums = numbers(body)
         declared = _cited(raw, len(passages))

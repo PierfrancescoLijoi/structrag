@@ -81,12 +81,18 @@ def ask(sv, q):
 
 
 def test_grounded_answer_is_returned_with_citations_and_quotes(rag):
-    sv, _ = rag("The encoder has a stack of 6 identical layers [1].")
+    sv, _ = rag("The encoder has a stack of 6 identical layers [1].", verifier_min=0.5)
     final, events = ask(sv, "How many layers does the encoder have?")
     assert final["answered"] and "[1]" in final["text"] and final["verdict"]["verifier"] == 0.95
     cite = final["citations"][0]
     assert cite["cited"] and "6 identical layers" in cite["evidence"] and cite["doc"]
     assert {e["type"] for e in events} >= {"status", "sources", "final", "token", "done"}
+
+
+def test_verifier_is_off_by_default_and_costs_no_call(rag):
+    sv, llm = rag("The encoder has a stack of 6 identical layers [1].", verdict={"A": 0.0, "B": 1.0})
+    final, _ = ask(sv, "How many layers does the encoder have?")
+    assert final["answered"] and "verifier" not in final["verdict"] and llm.choose_calls == []
 
 
 def test_model_saying_no_answer_becomes_a_refusal(rag):
@@ -96,7 +102,7 @@ def test_model_saying_no_answer_becomes_a_refusal(rag):
 
 
 def test_verifier_rejection_blocks_an_answer_from_outside_knowledge(rag):
-    sv, _ = rag("The encoder has a stack of 6 identical layers [1].", verdict={"A": 0.1, "B": 0.9})
+    sv, _ = rag("The encoder has a stack of 6 identical layers [1].", verdict={"A": 0.1, "B": 0.9}, verifier_min=0.5)
     final, _ = ask(sv, "How many layers does the encoder have?")
     assert not final["answered"] and final["verdict"]["reason"] == "verifier rejected the answer"
 
@@ -129,7 +135,7 @@ def test_low_relevance_refuses_without_calling_the_model(rag):
 
 
 def test_verifier_outage_never_lets_an_unverified_answer_through(rag):
-    sv, llm = rag("The encoder has a stack of 6 identical layers [1].")
+    sv, llm = rag("The encoder has a stack of 6 identical layers [1].", verifier_min=0.5)
     llm.choose = lambda *a, **k: (_ for _ in ()).throw(LLMError("down"))
     final, _ = ask(sv, "How many layers does the encoder have?")
     assert not final["answered"]
@@ -167,3 +173,25 @@ def test_chat_endpoint_streams_status_final_and_verdict(rag):
     assert '"type": "status"' in body and '"type": "final"' in body and '"answered": true' in body
     msgs = client.get(f"/api/sessions/{sid}").json()["messages"]
     assert msgs[1]["sources"][0]["evidence"]
+
+
+def test_sentences_about_the_sources_are_not_claims():
+    passages = ["Fibonacci numbers start with 0 and 1 and every later term is the sum of the previous two."]
+    r = g.check_answer("Il quarantesimo numero di Fibonacci non è elencato nei passaggi forniti [1].", passages, MIN)
+    assert not r.claims and r.dropped[0][1] == "says the sources lack the answer"
+    r = g.check_answer("Every later term is the sum of the previous two [1]. The exact value is not mentioned in the "
+                       "provided passages.", passages, MIN)
+    assert [c.text for c in r.claims] == ["Every later term is the sum of the previous two."]
+    ok = g.check_answer("The sequence has no upper limit on the source text [1].", ["The sequence has no upper limit on the source text."], MIN)
+    assert ok.claims or ok.dropped   # sanity: never crashes on negations
+
+
+def test_absence_filter_only_drops_notes_about_the_sources():
+    keep = ["Passwords must not contain plain text.",
+            "The fee is not refundable unless a receipt is provided to the document office.",
+            "The key is not found in the source code."]
+    for text in keep:
+        assert not g.ABSENCE.search(text), text
+    for text in ["The exact value is not mentioned in the provided passages.",
+                 "Il dato non \u00e8 riportato nei documenti forniti."]:
+        assert g.ABSENCE.search(text), text

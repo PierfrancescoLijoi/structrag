@@ -6,6 +6,7 @@ Answers below `agent_accept_prob` are not applied: they go to the human review q
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 
 from ..config import Settings
@@ -13,6 +14,7 @@ from ..ir import TABLE, Block, ParsedDoc
 from ..llm.client import ChatModel, LLMError
 from .heuristics import Inference
 
+log = logging.getLogger(__name__)
 LABELS = "ABCDEFGH"
 CONTEXT_CHARS = 240
 OUTLINE_ITEMS = 12
@@ -69,7 +71,8 @@ def resolve_headings(doc: ParsedDoc, inf: Inference, llm: ChatModel,
         try:
             probs = _ask(llm, _heading_state(doc, levels, idx, inf.body_key),
                          "What is the candidate line?", options)
-        except LLMError:
+        except LLMError as exc:
+            log.warning("structure agent unavailable, keeping heuristic headings for %s: %s", doc.title, exc)
             break   # model server down: keep heuristics, nothing is lost
         chosen = max(probs, key=probs.get)
         accepted = probs[chosen] >= settings.agent_accept_prob
@@ -100,7 +103,8 @@ def resolve_table_headers(doc: ParsedDoc, llm: ChatModel,
         state = f"Spreadsheet range {b.meta.get('range')}. First rows of the table:"
         try:
             probs = _ask(llm, state, "Which row contains the column headers?", options)
-        except LLMError:
+        except LLMError as exc:
+            log.warning("structure agent unavailable, keeping parser table headers for %s: %s", doc.title, exc)
             break
         chosen = max(probs, key=probs.get)
         accepted = probs[chosen] >= settings.agent_accept_prob

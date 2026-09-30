@@ -80,3 +80,35 @@ def test_docx_ragged_table_does_not_crash(tmp_path):
     doc = parse_file(tmp_path / "ragged.docx", Settings())
     table = next(b for b in doc.blocks if b.kind == "table")
     assert table.rows[0] == ("r0c0", "r0c1", "r0c2") and table.rows[1] == ("r1c1", "r1c2")
+
+
+def test_pdf_title_comes_from_metadata_when_it_is_a_real_one(tmp_path):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    from structrag.parsers import pdf
+
+    def make(name: str, title: str):
+        p = tmp_path / name
+        c = canvas.Canvas(str(p), pagesize=A4)
+        c.setTitle(title)
+        c.drawString(72, 700, "Some body text on the first page of the document.")
+        c.save()
+        return p
+
+    assert pdf.parse(make("wiki_en_turing.pdf", "Alan Turing - Wikipedia")).title == "Alan Turing - Wikipedia"
+    assert pdf.parse(make("report.pdf", "Microsoft Word - report.docx")).title == "report"
+
+
+def test_pdf_title_in_latin1_keeps_accents(tmp_path):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    from structrag.parsers import pdf
+
+    p = tmp_path / "doc.pdf"
+    c = canvas.Canvas(str(p), pagesize=A4)
+    c.setTitle("Societ\u00e0 italiana di fisica")
+    c.drawString(72, 700, "Some body text on the first page of the document.")
+    c.save()
+    assert pdf.parse(p).title == "Societ\u00e0 italiana di fisica"

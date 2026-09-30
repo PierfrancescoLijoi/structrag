@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from ..ir import LIST_ITEM, PARA, Block, ParsedDoc
 
 MAX_HEADING_CHARS = 120
+MAX_HEADING_WORDS = 14         # a 20-word 'heading' is a footnote or a sentence: '48. In 1639 he was allowed ...'
 MAX_HEADING_SHARE = 0.60       # more candidates than this share of blocks => layout is suspect
 MAX_WEAK_SHARE = 0.60          # bold-only candidates are dropped beyond this share
 MIN_BLOCKS_FOR_SHARE = 20      # tiny documents legitimately have a high title:body ratio
@@ -60,6 +61,7 @@ def _wordlike(text: str) -> bool:
 
 def _headingish(b: Block) -> bool:
     return (b.kind in (PARA, LIST_ITEM) and 0 < len(b.text) <= MAX_HEADING_CHARS
+            and len(b.text.split()) <= MAX_HEADING_WORDS
             and not b.text.rstrip().endswith(TRAILING) and b.level_hint is None and _wordlike(b.text))
 
 

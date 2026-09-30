@@ -105,6 +105,7 @@ class ImageReader:
                     "Rec.lang_type": LangRec(self.s.ocr_lang), "Rec.ocr_version": OCRVersion.PPOCRV5,
                     "Rec.model_type": ModelType.MOBILE,
                     "EngineConfig.onnxruntime.intra_op_num_threads": _threads(self.s)})
+                logging.getLogger("RapidOCR").setLevel(logging.ERROR)   # "text detection result is empty" per blank crop
             return self._engine
 
     # ---- OCR ---------------------------------------------------------------------------------
