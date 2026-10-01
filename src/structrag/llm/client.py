@@ -122,8 +122,9 @@ class LLM:
             names = [m["id"] for m in r.json().get("data", [])]
         except (httpx.HTTPError, ValueError):
             return {"ok": False, "models": []}
+        # llama-server serves whatever is loaded and lists it by file name: a lone model is the chat model
         return {"ok": True, "models": names,
-                "chat_ready": self.s.chat_model in names, "embed_ready": self.s.embed_model in names}
+                "chat_ready": self.s.chat_model in names or len(names) == 1, "embed_ready": self.s.embed_model in names}
 
 
 def get_embedder(settings: Settings, llm: LLM | None = None) -> Embedder:

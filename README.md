@@ -25,7 +25,35 @@ traps whose answer is not in any document.
 | Citations that contain the evidence | **98.3%** of correct answers |
 | Right chunk retrieved in the top 8 | **97.9%** (95.2% in the top 5, 89.8% in the top 3) |
 | Speed on a laptop | retrieval median **1.7 s**, full answer mean **3.9 s** (Qwen3-4B, 6 GB GPU); embeddings and reranking run on CPU |
-| Tests | **92** automated tests |
+| Tests | **93** automated tests |
+
+## The dashboard
+
+`structrag serve` opens a local dashboard (http://127.0.0.1:8000) with everything in one window. It is a front end to the same FastAPI service (REST + streaming chat) that other programs can call.
+
+**Ask.** Type a question, optionally restricting it to some documents (click documents in the left list). You get the answer
+with `[n]` citations, the **exact sentence of the source that backs it** (green quote), the section path and page, and the line
+*grounded: 1 source checked*. Under each source, `→ Table 1 · attention (p.5)` is a reference of that passage: one click opens
+the passage it leads to, with its own references, right in the answer (for a question on attention complexity, the table with the figures).
+If the documents do not contain the answer, you get a refusal in the language of the question and the closest passages.
+
+**Overview.** The state of the corpus at a glance: documents, sections, chunks, words, documents awaiting review, documents by
+status and format, masked personal data by type, and **which documents cite which** (here, the Italian Wikipedia articles
+pointing at each other).
+
+**Review queue.** This is where the structure agent stops and asks you. Each card shows the ambiguous case, the options, and the
+model's confidence for each (`A=0.52, B=0.47`). Nothing below 0.70 was applied. Click the right option: your answer is applied,
+the document is rebuilt, and it counts three times as much as a model decision when the layout is learned.
+
+**The rest of the left column.** *New chat* and the chat history; a drop zone (PDF, DOCX, PPTX, XLSX, MD) that ingests while
+you watch; the document list with a status badge (`ok`, `review`, `needs_ocr`) and a delete button; **Sync inbox**, which picks up
+new, edited, renamed and deleted files in `data/inbox`. The top bar shows whether the chat model answers, which embedder and reranker
+run, whether PII masking is on, and that everything is local.
+
+**How one question flows through it.** The question is rewritten standalone if it is a follow-up, then the hybrid retrieval and the
+reranker pick passages, the reference graph adds what they cite, and the relevance gate decides whether the model is called at all.
+Its answer is cut into sentences; each one must be supported by the passage it cites or it is dropped. What survives reaches the
+screen with its quote and references. See the architecture below for each stage.
 
 ## Architecture
 
@@ -141,7 +169,7 @@ src/structrag/
   store.py        SQLite + FTS5 index, review queue, graph queries
   api.py, web/    FastAPI and the dashboard
 eval/bench/       benchmark harness, calibration, question sets
-tests/            92 tests
+tests/            93 tests
 ```
 
 ## License

@@ -159,3 +159,20 @@ def test_pii_ctx_and_text_stay_consistent(services, tmp_path):
     rows = services.store.conn.execute("SELECT text, ctx FROM chunks").fetchall()
     assert rows and all("Anna" not in r["text"] and "Anna" not in r["ctx"] for r in rows)
     assert not services.store.conn.execute("SELECT 1 FROM chunk_fts WHERE chunk_fts MATCH 'Anna'").fetchall()
+
+
+def _health(models: list[str], chat_model: str = "qwen3") -> dict:
+    """LLM.health() against a stub /models endpoint."""
+    import httpx
+    from structrag.config import Settings
+    from structrag.llm.client import LLM
+    llm = LLM(Settings(chat_model=chat_model, base_url="http://stub/v1"))
+    llm.http = httpx.Client(base_url="http://stub/v1", transport=httpx.MockTransport(
+        lambda req: httpx.Response(200, json={"data": [{"id": m} for m in models]})))
+    return llm.health()
+
+
+def test_single_model_server_counts_as_chat_ready_whatever_its_name():
+    assert _health(["C:/models/Qwen3-4B-Q5_K_M.gguf"])["chat_ready"]      # llama-server names the file, not the alias
+    assert _health(["qwen3", "llama3"])["chat_ready"]
+    assert not _health(["llama3", "mistral"])["chat_ready"]               # several models, none is the one asked for

@@ -144,7 +144,7 @@ function showVerdict(box, ev) {
 
 async function refresh() {
   const [docs, sessions, review, health] = await Promise.all(['/api/docs', '/api/sessions', '/api/review', '/api/health'].map((p) => api(p).then((r) => r.json())));
-  $('status').textContent = health.ok ? `models: ${health.chat_ready ? 'chat ok' : 'chat missing'}, ${health.embed_ready || health.embedder === 'hash' ? 'embed ok' : 'embed missing'}` : 'model server offline (start Ollama)';
+  $('status').textContent = health.ok ? `models: ${health.chat_ready ? 'chat ok' : 'chat missing'}, ${health.embed_ready || ['hash', 'local'].includes(health.embedder) ? 'embed ok' : 'embed missing'}` : 'model server offline (start Ollama)';
   $('reviewbtn').textContent = `Review queue (${review.length})`;
   if ($('overview').style.display === 'block') loadOverview();
   $('models').textContent = `${health.embedder === 'local' ? 'local embeddings' : health.embedder}${health.rerank === 'local' ? ' + reranker' : ''}`;
