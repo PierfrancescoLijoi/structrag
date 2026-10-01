@@ -86,6 +86,16 @@ answer looks the way it does.
 | **API, dashboard, CLI** `api.py`, `web/`, `cli.py` | FastAPI, a single-file web UI with sources, quotes, figures and the review queue, and a CLI (`ingest`, `ask`, `serve`, `scan`, `watch`, `docs`, `review`, `doctor`) | Usable by a person on day one |
 | **Benchmark harness** `eval/bench/` | 237 questions, per-question logs, grader, calibration and verifier tools | Every number in this README is reproducible |
 
+## What a chunk looks like
+
+<img src="docs/img/chunk.svg" alt="Anatomy of a chunk: breadcrumb, text body, table chunk with repeated header, figure chunk, stored fields" width="100%"/>
+
+A chunk is the unit that is indexed, retrieved, quoted and cited. It never crosses a section boundary and carries the path of
+its section as a breadcrumb, so a passage still says where it comes from when it is read alone. The breadcrumb plus the text
+(`ctx`) is what gets embedded and indexed; the text alone is what an answer quotes. Tables are cut by rows with the header
+repeated, and a figure's caption and OCR text become a chunk of their own. Sizes (`chunk_target_words`, `chunk_max_words`,
+`table_rows_per_chunk`) are in `config.py`.
+
 ## Structure that adapts to the document
 
 <img src="docs/img/structure.svg" alt="Structure inference cascade" width="100%"/>
